@@ -1,0 +1,45 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  INT_DIR: '{{.SCRATCH_DIR}}/obj/{{.MODULE_NAME}}/'
+  MS_ARGS: '--sc false /p:RunAnalyzersDuringBuild=false /p:IntermediateOutputPath="{{.INT_DIR}}" /p:UseCommonOutputDirectory=true /p:BuildInParallel=true /p:MultiProcessorCompilation=true /p:ErrorOnDuplicatePublishOutputFiles=false'
+
+tasks:
+  #called by build pipeline to sync repo
+  update:
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+     - git reset --hard  #clean up any local changes
+     - git remote update     
+     - git pull origin {{.BRANCH_NAME}} --verify-signatures 
+     #re-write semver after hard reset
+     - dotnet-gitversion.exe /updateprojectfiles
+
+#called by build pipeline to build module
+  build:
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+    
+    - for: [ win-x64, linux-x64, osx-x64,  linux-arm64, linux-arm ]
+      cmd: powershell -Command 'dotnet publish -c debug -r {{ .ITEM }} {{.BUILD_FLAGS}} {{.MS_ARGS}}' 
+    
+    #build release mode after all debug builds
+    - for: [ win-x64, linux-x64, osx-x64,  linux-arm64, linux-arm ]
+      cmd: powershell -Command 'dotnet publish -c release -r {{ .ITEM }} {{.BUILD_FLAGS}} {{.MS_ARGS}}'
+  
+  postbuild_success:
+    cmds: 
+    #git archive in the module directory
+     - git archive --format {{.ARCHIVE_FILE_FORMAT}} --output {{.ARCHIVE_FILE_NAME}} HEAD
+
+
+#called by build pipeline to clean module
+  clean:
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+    #clean solution
+    - dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
+    - cmd: powershell -Command "rm {{ .ARCHIVE_FILE_NAME }} --Force" 
+      ignore_error: true

@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AssemblyName>vnbuild</AssemblyName>
+    <RootNamespace>VNLib.Tools.Build.Executor</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Vaughn Nugent</Authors>
+    <Company>Vaughn Nugent</Company>
+    <Description>Automatically builds and produces binaries from git-based modules with proper indexing for web based deployments</Description>
+    <Copyright>Copyright © 2024 Vaughn Nugent</Copyright>
+    <Product>vnbuild</Product>
+    <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/vnbuild</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/VnUgE/vnbuild/</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Typin" Version="3.1.0" />
+    <PackageReference Include="LibGit2Sharp" Version="0.30.0" />
+    <PackageReference Include="Microsoft.Build" Version="17.10.0-preview-24081-01" />
+    <PackageReference Include="Semver" Version="3.0.0-beta.1" />
+    <PackageReference Include="Serilog" Version="4.0.0-dev-02166" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.1.0-dev-00943" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.1-dev-00972" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "VNLib.Tools.Build.Executor": {
+      "commandName": "Project",
+      "commandLineArgs": "publish -v -c -x vnlib.browser",
+      "workingDirectory": "B:\\Progamming\\vnlib.browser"
+    }
+  }
+}
