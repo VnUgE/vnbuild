@@ -70,7 +70,8 @@ jobs:
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
-  - !BranchUpdateTrigger {}
+  - !BranchUpdateTrigger
+    branches: master
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
