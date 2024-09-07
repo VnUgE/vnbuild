@@ -103,7 +103,7 @@ namespace VNLib.Tools.Build.Executor.Extensions
             SemVersion baseVersion;
 
             //Get latest version tag from git
-            Tag? vTag = mod.Repository.Tags.OrderByDescending(p => SemVersion.Parse(p.FriendlyName, style)).FirstOrDefault();
+            Tag? vTag = mod.Repository.Tags.OrderByDescending(p => SemVersion.Parse(p.FriendlyName, style), SemVersion.SortOrderComparer).FirstOrDefault();
 
             //Find the number of commits since the last tag
             if (vTag != null)

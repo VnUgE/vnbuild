@@ -20,7 +20,12 @@ namespace VNLib.Tools.Build.Executor.Constants
         /// <param name="process">The name of the process to run</param>
         /// <param name="args">CLI arguments to pass to the process</param>
         /// <returns>The process exit code</returns>
-        public static async Task<int> RunProcessAsync(string process, string? workingDir, string[] args, IReadOnlyDictionary<string, string>? env = null)
+        public static async Task<int> RunProcessAsync(
+            string process, 
+            string? workingDir, 
+            string[] args, 
+            IReadOnlyDictionary<string, string>? env = null
+        )
         {
             //Init new console cancellation token
             using ConsoleCancelToken ctToken = new();

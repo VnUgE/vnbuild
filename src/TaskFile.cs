@@ -56,7 +56,7 @@ namespace VNLib.Tools.Build.Executor
             args.Add(GetCommand(command));
 
             //Exec task in the module dir
-            int result = await RunProcessAsync(taskFilePath, scope.WorkingDir.FullName, args.ToArray(), vars);
+            int result = await RunProcessAsync(taskFilePath, scope.WorkingDir.FullName, [.. args], vars);
             
             if(throwIfFailed)
             {
@@ -68,14 +68,14 @@ namespace VNLib.Tools.Build.Executor
         {
             return cmd switch
             {
-                TaskfileComamnd.Clean => "clean",
-                TaskfileComamnd.Build => "build",
-                TaskfileComamnd.Upload => "upload",
-                TaskfileComamnd.Update => "update",
-                TaskfileComamnd.PostbuildSuccess => "postbuild_success",
-                TaskfileComamnd.PostbuildFailure => "postbuild_failed",
-                TaskfileComamnd.Publish => "publish",
-                TaskfileComamnd.Test => "test",
+                TaskfileComamnd.Clean               => "clean",
+                TaskfileComamnd.Build               => "build",
+                TaskfileComamnd.Upload              => "upload",
+                TaskfileComamnd.Update              => "update",
+                TaskfileComamnd.PostbuildSuccess    => "postbuild_success",
+                TaskfileComamnd.PostbuildFailure    => "postbuild_failed",
+                TaskfileComamnd.Publish             => "publish",
+                TaskfileComamnd.Test                => "test",
                 _ => throw new NotImplementedException()
             };
         }

@@ -17,7 +17,7 @@ tasks:
      - powershell -Command "Get-ChildItem -Include *.cs,*.csproj -Recurse | Where { \$_.FullName -notlike '*\obj\*' } | Resolve-Path -Relative | tar --files-from - -czf '{{.TARGET}}/src.tgz'"
 
      #run post in debug mode
-     - for: [ win-x64, linux-x64, osx-x64,  linux-arm64, linux-arm ]
+     - for: [ win-x64, linux-x64, osx-x64, linux-arm64, linux-arm ]
        task: postbuild
        vars: { BUILD_MODE: debug, TARGET_OS: '{{ .ITEM }}'}
 

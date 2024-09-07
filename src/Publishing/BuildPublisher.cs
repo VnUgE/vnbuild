@@ -16,7 +16,7 @@ using VNLib.Tools.Build.Executor.Extensions;
 using VNLib.Tools.Build.Executor.Projects;
 using static VNLib.Tools.Build.Executor.Constants.Config;
 
-namespace VNLib.Tools.Build.Executor
+namespace VNLib.Tools.Build.Executor.Publishing
 {
 
     public sealed class BuildPublisher(BuildConfig config, GpgSigner signer)
@@ -159,9 +159,9 @@ namespace VNLib.Tools.Build.Executor
 
                 //Build project array
                 writer.WriteStartArray("versions");
-                
+
                 //Write all git hashes from head back to the first commit
-                foreach(Commit commit in mod.Repository.Commits)
+                foreach (Commit commit in mod.Repository.Commits)
                 {
                     writer.WriteStringValue(commit.Sha);
                 }
@@ -172,7 +172,7 @@ namespace VNLib.Tools.Build.Executor
                 writer.WriteStartArray("releases");
 
                 //Write all git tags
-                foreach(Tag tag in mod.Repository.Tags.OrderByDescending(static p => p.FriendlyName))
+                foreach (Tag tag in mod.Repository.Tags.OrderByDescending(static p => p.FriendlyName))
                 {
                     writer.WriteStartObject();
 
@@ -230,7 +230,10 @@ namespace VNLib.Tools.Build.Executor
 
             await mod.FileManager.WriteFileAsync(ModuleFileType.GitHistory, ms.ToArray());
 
-            await mod.FileManager.WriteFileAsync(ModuleFileType.LatestHash, Encoding.UTF8.GetBytes(mod.Repository.Head.Tip.Sha));
+            await mod.FileManager.WriteFileAsync(
+                ModuleFileType.LatestHash, 
+                Encoding.UTF8.GetBytes(mod.Repository.Head.Tip.Sha)
+            );
         }
 
         /*
@@ -263,9 +266,9 @@ namespace VNLib.Tools.Build.Executor
                         );
 
                 //Sign synchronously
-                foreach(FileInfo artifact in artifacts)
+                foreach (FileInfo artifact in artifacts)
                 {
-                   await signer.SignFileAsync(artifact);
+                    await signer.SignFileAsync(artifact);
                 }
             }
         }
@@ -297,7 +300,7 @@ namespace VNLib.Tools.Build.Executor
 
             //Write tag history for current repo
             writer.WriteStartArray("tags");
-           
+
             foreach (Tag tag in repo.Tags)
             {
                 //clamp message length and ellipsis if too long
@@ -312,7 +315,7 @@ namespace VNLib.Tools.Build.Executor
                 writer.WriteString("sha", tag.Target.Sha);
                 writer.WriteString("message", message);
                 writer.WriteString("author", tag.Annotation?.Tagger.Name);
-                writer.WriteString("date", (tag.Annotation?.Tagger.When ?? default));
+                writer.WriteString("date", tag.Annotation?.Tagger.When ?? default);
                 writer.WriteEndObject();
             }
 
@@ -387,7 +390,8 @@ namespace VNLib.Tools.Build.Executor
 
         private IEnumerable<FileInfo> GetProjOutputFiles(IModuleFileManager man, IProject project)
         {
-            return man.GetArtifactOutputDir(project).EnumerateFiles("*.*", SearchOption.TopDirectoryOnly)
+            return man.GetArtifactOutputDir(project)
+                .EnumerateFiles("*.*", SearchOption.TopDirectoryOnly)
                 .Where(p => p.Extension != $".{config.HashFuncName}");
         }
 
@@ -403,7 +407,7 @@ namespace VNLib.Tools.Build.Executor
             string? archiveFile = Directory.EnumerateFiles(mod.Repository.Info.WorkingDirectory, config.SourceArchiveName, SearchOption.TopDirectoryOnly).FirstOrDefault();
 
             //If archive is null ignore and continue
-            if(string.IsNullOrWhiteSpace(archiveFile))
+            if (string.IsNullOrWhiteSpace(archiveFile))
             {
                 Log.Information("No archive file found for module {mod}", mod.ModuleName);
                 return null;

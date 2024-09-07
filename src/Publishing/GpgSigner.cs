@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 using VNLib.Tools.Build.Executor.Constants;
 
-namespace VNLib.Tools.Build.Executor
+namespace VNLib.Tools.Build.Executor.Publishing
 {
     public sealed class GpgSigner(bool enabled, string? defaultKey)
     {
@@ -18,7 +18,9 @@ namespace VNLib.Tools.Build.Executor
                 return;
             }
 
-            List<string> args = [ "--detach-sign" ];
+            List<string> args = [
+                "--detach-sign"
+            ];
 
             if (!string.IsNullOrWhiteSpace(defaultKey))
             {
@@ -45,7 +47,7 @@ namespace VNLib.Tools.Build.Executor
                 case 0:
                     break;
                 default:
-                    throw new Exception($"Failed to sign file {file.FullName}");
+                    throw new BuildFailedException($"Failed to sign file {file.FullName}");
             }
         }
     }

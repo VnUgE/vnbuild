@@ -11,9 +11,10 @@ using VNLib.Tools.Build.Executor.Model;
 using VNLib.Tools.Build.Executor.Modules;
 using VNLib.Tools.Build.Executor.Extensions;
 using VNLib.Tools.Build.Executor.Constants;
+using VNLib.Tools.Build.Executor.Publishing;
 
 namespace VNLib.Tools.Build.Executor
-{    
+{
 
     public sealed class BuildPipeline(Logger Log) : IDisposable
     {

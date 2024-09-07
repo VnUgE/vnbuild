@@ -2,7 +2,7 @@
 
 namespace VNLib.Tools.Build.Executor
 {
-    sealed class BuildStepFailedException : Exception
+    internal sealed class BuildStepFailedException : BuildFailedException
     {
         public string? ArtifactName { get; set; }
 
@@ -13,17 +13,17 @@ namespace VNLib.Tools.Build.Executor
         { }
        
 
-        public BuildStepFailedException(string? message, Exception? innerException) : base(message, innerException)
+        public BuildStepFailedException(string? message, Exception? innerException) 
+            : base(message, innerException)
         { }
 
-        public BuildStepFailedException(string? message, Exception? innerException, string name) : base(message, innerException)
-        {
-            ArtifactName = name;
-        }
+        public BuildStepFailedException(string? message, Exception? innerException, string name) 
+            : base(message, innerException) 
+            => ArtifactName = name;
 
-        public BuildStepFailedException(string message, string artifactName):base(message)
-        {
-            this.ArtifactName = artifactName;
-        }
+        public BuildStepFailedException(string message, string artifactName) : base(message) 
+            => ArtifactName = artifactName;
+
+        public override string Message => $"in: {ArtifactName} msg -> {base.Message}";
     }
 }

@@ -2,10 +2,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.Json;
-
 using VNLib.Tools.Build.Executor.Model;
 
-namespace VNLib.Tools.Build.Executor
+namespace VNLib.Tools.Build.Executor.Publishing
 {
     internal sealed class SleetFeedManager : IFeedManager
     {
@@ -35,10 +34,10 @@ namespace VNLib.Tools.Build.Executor
         /// <returns>The feed manager if found, null otherwise</returns>
         /// <exception cref="FileNotFoundException"></exception>
         /// <exception cref="ArgumentException"></exception>
-        [return:NotNullIfNotNull(nameof(feedPath))]
+        [return: NotNullIfNotNull(nameof(feedPath))]
         public static IFeedManager? GetSleetFeed(string? feedPath)
         {
-            if(string.IsNullOrWhiteSpace(feedPath))
+            if (string.IsNullOrWhiteSpace(feedPath))
             {
                 return null;
             }

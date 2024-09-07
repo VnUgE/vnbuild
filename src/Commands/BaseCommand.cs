@@ -21,7 +21,7 @@ namespace VNLib.Tools.Build.Executor.Commands
         [CommandOption("force", 'f', Description = "Forces the operation even if steps are required")]
         public bool Force { get; set; }
 
-        [CommandOption("modules", 'm', Description = "Only use the specified modules, comma separated list")]
+        [CommandOption("include", 'i', Description = "Only use the specified modules, comma separated list")]
         public string? Modules { get; set; }
 
         [CommandOption("exclude", 'x', Description = "Ignores the specified modules, comma separated list")]
@@ -79,11 +79,17 @@ namespace VNLib.Tools.Build.Executor.Commands
             }
             catch (OperationCanceledException)
             {
-                console.WithForegroundColor(ConsoleColor.Red, static o => o.Output.WriteLine("Operation cancelled"));
+                console.WithForegroundColor(
+                    ConsoleColor.Red, 
+                    static o => o.Error.WriteLine("Operation cancelled")
+                );
             }
-            catch(BuildStepFailedException be)
+            catch(BuildFailedException be)
             {
-                console.WithForegroundColor(ConsoleColor.Red, o => o.Output.WriteLine("FATAL: Build step failed on module {0}, msg -> {1}", be.ArtifactName, be.Message));
+                console.WithForegroundColor(
+                    ConsoleColor.Red, 
+                    o => o.Error.WriteLine("FATAL: Build step failed {0}", be.Message)
+                );
             }
         }
 

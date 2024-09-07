@@ -61,12 +61,14 @@ namespace VNLib.Tools.Build.Executor.Extensions
                 //realtive file path
                 outDir = Path.Combine(project.WorkingDir.FullName, outDir);
 
-                return new DirectoryInfo(outDir).EnumerateFiles(config.OutputFileType, SearchOption.TopDirectoryOnly);
+                if (Directory.Exists(outDir))
+                {
+                    return new DirectoryInfo(outDir)
+                        .EnumerateFiles(config.OutputFileType, SearchOption.TopDirectoryOnly);
+                }
             }
-            else
-            {
-                return project.WorkingDir.EnumerateFiles(config.OutputFileType, SearchOption.AllDirectories);
-            }
+
+            return project.WorkingDir.EnumerateFiles(config.OutputFileType, SearchOption.AllDirectories);
         }
 
         /// <summary>
@@ -122,7 +124,9 @@ namespace VNLib.Tools.Build.Executor.Extensions
 
         public static string GetSafeProjectName(this IProject project)
         {
-            return project.ProjectName.Replace('/', '-').Replace('\\','-');
+            return project.ProjectName
+                .Replace('/', '-')
+                .Replace('\\','-');
         }
     }
 }
