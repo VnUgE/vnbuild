@@ -1,4 +1,4 @@
-version: 33
+version: 35
 jobs:
 - name: Push to GitHub
   steps:
@@ -33,6 +33,45 @@ jobs:
   - !ScheduleTrigger
     cronExpression: 0 15 10 ? * *
     projects: vnbuild
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 3600
+
+- name: Build and publish
+  jobExecutor: primary-shell-executor
+  steps:
+  - !CheckoutStep
+    name: Code checkout
+    cloneCredential: !DefaultCredential {}
+    withLfs: false
+    withSubmodules: false
+    checkoutPath: '@project_name@/'
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: VNBuild build
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        vnbuild build -S --verbose
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: VNBuild publish
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        vnbuild publish --ftp "@secret:ftp_server_address@" --sign
+    envVars:
+    - name: FTP_USERNAME
+      value: '@secret:ftp_username@'
+    - name: FTP_PASSWORD
+      value: '@secret:ftp_password@'
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !BranchUpdateTrigger
+    branches: master
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
