@@ -16,30 +16,48 @@ tasks:
       #pack up source code and put in output
      - powershell -Command "Get-ChildItem -Include *.cs,*.csproj -Recurse | Where { \$_.FullName -notlike '*\obj\*' } | Resolve-Path -Relative | tar --files-from - -czf '{{.TARGET}}/src.tgz'"
 
-     #run post in debug mode
-     - for: [ win-x64, linux-x64, osx-x64, linux-arm64, linux-arm ]
-       task: postbuild
-       vars: { BUILD_MODE: debug, TARGET_OS: '{{ .ITEM }}'}
+      #remove uncessary files from the release dir
+     - powershell -Command "Get-ChildItem -Recurse '{{ .RELEASE_DIR }}/' -Include *.pdb,*.xml | Remove-Item"
 
-     #remove uncessary files from the release dir
-     - powershell -Command "Get-ChildItem -Recurse '{{.RELEASE_DIR}}/' -Include *.pdb,*.xml | Remove-Item"
+     - task: posbuild_parallel
 
-     - for: [ win-x64, linux-x64, osx-x64, linux-arm64, linux-arm ]
-       task: postbuild
-       vars: { BUILD_MODE: release, TARGET_OS: '{{ .ITEM }}'}
+  posbuild_parallel:
+    deps:
+     - task: postbuild
+       vars: { BUILD_MODE: debug, TARGET_OS: win-x64 }
+     - task: postbuild
+       vars: { BUILD_MODE: debug, TARGET_OS: linux-x64 }
+     - task: postbuild
+       vars: { BUILD_MODE: debug, TARGET_OS: osx-x64 }
+     - task: postbuild
+       vars: { BUILD_MODE: debug, TARGET_OS: linux-arm }
+     - task: postbuild
+       vars: { BUILD_MODE: debug, TARGET_OS: linux-arm64 }
+     
+     - task: postbuild
+       vars: { BUILD_MODE: release, TARGET_OS: win-x64 }
+     - task: postbuild
+       vars: { BUILD_MODE: release, TARGET_OS: linux-x64 }
+     - task: postbuild
+       vars: { BUILD_MODE: release, TARGET_OS: osx-x64 }
+     - task: postbuild
+       vars: { BUILD_MODE: release, TARGET_OS: linux-arm }
+     - task: postbuild
+       vars: { BUILD_MODE: release, TARGET_OS: linux-arm64 }
+
 
   postbuild:
     internal: true
     dir: '{{.USER_WORKING_DIR}}'
     vars:
-      BUILD_DIR: "{{.USER_WORKING_DIR}}/bin/{{.BUILD_MODE}}/{{.TARGET_FRAMEWORK}}/{{.TARGET_OS}}/publish"
+      BUILD_DIR: "{{ .USER_WORKING_DIR }}/bin/{{ .BUILD_MODE }}/{{ .TARGET_FRAMEWORK }}/{{ .TARGET_OS }}/publish"
     cmds:     
      #copy and readme to target
-     - cmd: cd .. && powershell -Command "Copy-Item -Path ./build.readme.txt -Destination '{{.BUILD_DIR}}/readme.txt'"
+     - cmd: cd .. && powershell -Command "Copy-Item -Path ./build.readme.txt -Destination '{{ .BUILD_DIR }}/readme.txt'"
        ignore_error: true
 
      #tar outputs
-     - cd "{{.BUILD_DIR}}" && tar -czf "{{.TARGET}}/{{.TARGET_OS}}-{{.BUILD_MODE}}.tgz" .
+     - cd "{{ .BUILD_DIR }}" && tar -czf "{{ .TARGET }}/{{ .TARGET_OS }}-{{ .BUILD_MODE }}.tgz" .
 
     #Remove the output dirs on clean
   clean:
