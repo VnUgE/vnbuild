@@ -61,7 +61,7 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        vnbuild publish --ftp "@secret:ftp_server_address@" --sign --verbose
+        vnbuild publish --ftp "@secret:ftp_server_address@" --sign
     envVars:
     - name: FTP_USERNAME
       value: '@secret:ftp_username@'
