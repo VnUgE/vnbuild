@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -22,7 +23,8 @@ namespace VNLib.Tools.Build.Executor.Constants
         /// <returns>The process exit code</returns>
         public static async Task<int> RunProcessAsync(
             string process, 
-            string? workingDir, 
+            string logName,
+            DirectoryInfo? workingDir, 
             string[] args, 
             IReadOnlyDictionary<string, string>? env = null
         )
@@ -38,7 +40,7 @@ namespace VNLib.Tools.Build.Executor.Constants
                 CreateNoWindow = true,
                 //Create a child process, not shell
                 UseShellExecute = false,
-                WorkingDirectory = workingDir ?? string.Empty,
+                WorkingDirectory = workingDir?.FullName ?? string.Empty,
             };
 
             if (env != null)
@@ -66,8 +68,8 @@ namespace VNLib.Tools.Build.Executor.Constants
             Console.WriteLine();
 
             //Log std out
-            Task stdout = LogStdOutAsync(proc, ctToken.Token);
-            Task stdErr = LogStdErrAsync(proc, ctToken.Token);
+            Task stdout = LogStdOutAsync(proc, logName, ctToken.Token);
+            Task stdErr = LogStdErrAsync(proc, logName, ctToken.Token);
 
             //Wait for the process to exit
             Task wfe = proc.WaitForExitAsync(ctToken.Token);
@@ -82,7 +84,7 @@ namespace VNLib.Tools.Build.Executor.Constants
             return proc.ExitCode;
         }
 
-        private static async Task LogStdOutAsync(Process psi, CancellationToken cancellation)
+        private static async Task LogStdOutAsync(Process psi, string logName, CancellationToken cancellation)
         {
             try
             {
@@ -100,7 +102,7 @@ namespace VNLib.Tools.Build.Executor.Constants
                     }
 
                     //Print to log file
-                    Console.WriteLine(line);
+                    Console.WriteLine($"[{logName}]: {line}");
                 } while (!psi.HasExited);
             }
             catch (Exception ex)
@@ -109,7 +111,7 @@ namespace VNLib.Tools.Build.Executor.Constants
             }
         }
 
-        private static async Task LogStdErrAsync(Process psi, CancellationToken cancellation)
+        private static async Task LogStdErrAsync(Process psi, string logName, CancellationToken cancellation)
         {
             try
             {
@@ -127,7 +129,7 @@ namespace VNLib.Tools.Build.Executor.Constants
                     }
 
                     //Print to log file
-                    Console.WriteLine(line);
+                    Console.WriteLine($"[{logName}]: {line}");
                 } while (!psi.HasExited);
             }
             catch (Exception ex)

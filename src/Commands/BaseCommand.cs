@@ -84,6 +84,13 @@ namespace VNLib.Tools.Build.Executor.Commands
                     static o => o.Error.WriteLine("Operation cancelled")
                 );
             }
+            catch(BuildFailedException be) when (be.InnerException is BuildFailedException bee)
+            {
+                console.WithForegroundColor(
+                    ConsoleColor.Red,
+                    o => o.Error.WriteLine("FATAL: Build step failed {0}", bee.Message)
+                );
+            }
             catch(BuildFailedException be)
             {
                 console.WithForegroundColor(

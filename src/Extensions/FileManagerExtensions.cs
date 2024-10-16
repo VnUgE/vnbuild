@@ -35,9 +35,14 @@ namespace VNLib.Tools.Build.Executor.Extensions
              */
 
             //Get the project file names contained in the current module
-            string[] selfProjects = module.Projects.Select(static p => p.ProjectFile.Name).ToArray();
+            string[] selfProjects = module.Projects
+                .Select(static p => p.ProjectFile.Name)
+                .ToArray();
 
-            return module.Projects.SelectMany(static p => p.GetDependencies()).Where(dep => !selfProjects.Contains(dep)).ToArray();
+            return module.Projects
+                .SelectMany(static p => p.GetDependencies())
+                .Where(dep => !selfProjects.Contains(dep))
+                .ToArray();
         }
 
         /// <summary>
@@ -112,7 +117,22 @@ namespace VNLib.Tools.Build.Executor.Extensions
                 Directory.Delete(manager.OutputDir, true);
             }
         }
-       
+
+        /// <summary>
+        /// Deletes the output's module directory
+        /// </summary>
+        /// <param name="manager"></param>
+        public static void CleanProjectOutput(this IModuleFileManager manager, IProject project)
+        {
+            DirectoryInfo dir = manager.GetArtifactOutputDir(project);
+
+            //Delete output directory for solution
+            if (dir.Exists)
+            {
+                dir.Delete(true);
+            }
+        }
+
 
         /// <summary>
         /// Writes the source file checksum change to the project's sum file

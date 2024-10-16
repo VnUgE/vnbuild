@@ -156,22 +156,63 @@ namespace VNLib.Tools.Build.Executor.Modules
             //Run build for all projects
             foreach (IProject proj in Projects)
             {
-                //Exec
-                await TaskFile.ExecCommandAsync(proj, TaskfileComamnd.Build, true);
+                await BuildSingleProject(proj);
             }
+        }
+
+        /// <summary>
+        /// Builds a single project within this module
+        /// </summary>
+        /// <param name="project">The project instance to build</param>
+        /// <returns>A task that resolves when the build operation completes</returns>
+        public virtual async Task BuildSingleProject(IProject project)
+        {
+            FileManager.CleanProjectOutput(project);
+
+            await TaskFile.ExecCommandAsync(project, TaskfileComamnd.Build, true);
+        }
+
+
+        /// <summary>
+        /// Builds a single project within this module
+        /// </summary>
+        /// <param name="project">The project instance to build</param>
+        /// <returns>A task that resolves when the build operation completes</returns>
+        public virtual async Task PostbuildSingleProject(IProject project, bool success)
+        {
+            TaskfileComamnd cmd = success
+                ? TaskfileComamnd.PostbuildSuccess
+                : TaskfileComamnd.PostbuildFailure;
+
+            //Run taskfile postbuild, not required to produce a sucessful result
+            await TaskFile.ExecCommandAsync(project, cmd, throwIfFailed: success);
         }
 
         ///<inheritdoc/>
         public virtual async Task DoStepPostBuild(bool success)
         {
-            //Run taskfile postbuild, not required to produce a sucessful result
-            await TaskFile.ExecCommandAsync(this, success ? TaskfileComamnd.PostbuildSuccess : TaskfileComamnd.PostbuildFailure, false);
+            TaskfileComamnd cmd = success
+                ? TaskfileComamnd.PostbuildSuccess
+                : TaskfileComamnd.PostbuildFailure;
 
-            //Run postbuild for all projects
-            foreach (IProject proj in Projects)
+            //Run taskfile postbuild, not required to produce a sucessful result
+            await TaskFile.ExecCommandAsync(this, cmd, throwIfFailed: success);
+
+            Task[] projPostbuild = Projects
+                .Select(p => TaskFile.ExecCommandAsync(p, cmd, throwIfFailed: success))
+                .ToArray();
+
+            try
             {
-                //Run postbuild for projects
-                await TaskFile.ExecCommandAsync(proj, success ? TaskfileComamnd.PostbuildSuccess : TaskfileComamnd.PostbuildFailure, false);
+                await Task.WhenAll(projPostbuild);
+            }
+            catch(Exception ex)
+            {
+                throw new BuildStepFailedException(
+                    message: "Failed to run postbuild steps",
+                    ex,
+                    name: ModuleName
+                );
             }
 
             //Run postbuild for all projects

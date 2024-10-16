@@ -52,15 +52,30 @@ namespace VNLib.Tools.Build.Executor
                 args.Add(scope.TaskfileName);
             }
 
+            string logName;
+
+            if(scope is IProject proj)
+            {
+                logName = proj.ProjectName;
+            }
+            else if(scope is IModuleData mod)
+            {
+                logName = mod.ModuleName;
+            }
+            else
+            {
+                logName = scope.WorkingDir.Name;
+            }
+
             //Always add command last
             args.Add(GetCommand(command));
 
             //Exec task in the module dir
-            int result = await RunProcessAsync(taskFilePath, scope.WorkingDir.FullName, [.. args], vars);
+            int result = await RunProcessAsync(taskFilePath, logName, scope.WorkingDir, [.. args], vars);
             
             if(throwIfFailed)
             {
-                ThrowIfStepFailed(result, command);
+                ThrowIfStepFailed(scope, result, command);
             }
         }
 
@@ -80,14 +95,18 @@ namespace VNLib.Tools.Build.Executor
             };
         }
 
-        private void ThrowIfStepFailed(int result, TaskfileComamnd cmd)
+        private void ThrowIfStepFailed(ITaskfileScope scope, int result, TaskfileComamnd cmd)
         {
             switch (result)
             {
                 case 200:   //Named task not found
                     return;
                 case 201:
-                    Utils.ThrowIfStepFailed(false, $"Task failed to execute task command {cmd}", moduleName.Invoke());
+                    Utils.ThrowIfStepFailed(
+                        status: false, 
+                        message: $"Task failed to execute task command {cmd} for {scope.WorkingDir.Name}", 
+                        moduleName.Invoke()
+                    );
                     return;
             }
         }

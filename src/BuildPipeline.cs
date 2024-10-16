@@ -77,6 +77,12 @@ namespace VNLib.Tools.Build.Executor
             Log.Information("The following modules will be processed\n{mods}",  _selected.Select(m => m.ModuleName));
         }
 
+        /// <summary>
+        /// Returns all loaded modules
+        /// </summary>
+        /// <returns>The collection of all loaded modules</returns>
+        public IReadOnlyCollection<IModuleData> GetModules() => _selected;
+
         private void SetTaskVariables(IDirectoryIndex dirIndex, IFeedManager[] feeds)
         {
             //Configure variables
@@ -198,6 +204,38 @@ namespace VNLib.Tools.Build.Executor
                     await BuildSingleModule(mod, Log);
                 }
             }
+        }
+
+        public async Task BuildSingleProject(string moduleName, string projectName)
+        {
+            //First find module
+            ModuleBase module = _selected.FirstOrDefault(m => string.Equals(m.ModuleName, moduleName, StringComparison.OrdinalIgnoreCase))
+                ?? throw new BuildStepFailedException(
+                    message: $"Module {moduleName} not found",
+                    moduleName
+                );
+
+            //Find project
+            IProject project = module.Projects.FirstOrDefault(p => string.Equals(p.ProjectName, projectName, StringComparison.OrdinalIgnoreCase))
+                ?? throw new BuildStepFailedException(
+                    message: $"Project {projectName} not found in module {moduleName}",
+                    moduleName
+                );
+
+            try
+            {
+                //Build single project
+                await module.BuildSingleProject(project);
+            }
+            catch
+            {
+                //failure
+                await module.PostbuildSingleProject(project, success: false);
+                throw;
+            }
+
+            //Completed successfully, await the result of post-build
+            await module.PostbuildSingleProject(project, success: true);
         }
 
         static async Task BuildSingleModule(IBuildable module, ILogger log)

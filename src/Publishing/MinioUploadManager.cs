@@ -26,7 +26,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
             };
 
             //Set working dir to the supplied dir path, and run the command
-            int result = await RunProcessAsync("mc", path, args);
+            int result = await RunProcessAsync("mc", "minio", new(path), args);
 
             if (result != 0)
             {

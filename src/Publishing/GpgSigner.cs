@@ -39,7 +39,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
                 File.Delete(sigFile);
             }
 
-            int result = await Utils.RunProcessAsync("gpg", null, args.ToArray());
+            int result = await Utils.RunProcessAsync("gpg", "gpg", null, args.ToArray());
 
             switch (result)
             {
