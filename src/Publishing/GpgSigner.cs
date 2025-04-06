@@ -1,14 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 using VNLib.Tools.Build.Executor.Constants;
 
 namespace VNLib.Tools.Build.Executor.Publishing
 {
-    public sealed class GpgSigner(bool enabled, string? defaultKey)
+    public sealed class GpgSigner(BuildConfig config, bool enabled, string? defaultKey)
     {
+        private readonly ProcessRunner runner = new(config);
+
         public bool IsEnabled { get; } = enabled;
 
         public async Task SignFileAsync(FileInfo file)
@@ -18,28 +19,21 @@ namespace VNLib.Tools.Build.Executor.Publishing
                 return;
             }
 
-            List<string> args = [
-                "--detach-sign"
-            ];
-
-            if (!string.IsNullOrWhiteSpace(defaultKey))
-            {
-                //Set the preferred key
-                args.Add("--default-key");
-                args.Add(defaultKey);
-            }
-
-            //Add input file
-            args.Add(file.FullName);
-
-            //Delete an original file 
+            //Delete an original file to avoid conflicts
             string sigFile = $"{file.FullName}.sig";
             if (File.Exists(sigFile))
             {
                 File.Delete(sigFile);
             }
 
-            int result = await Utils.RunProcessAsync("gpg", "gpg", null, args.ToArray());
+            //Substitute command variables
+            string commandString = config.GpgCommand
+                .Replace("{file}", file.FullName)
+                .Replace("{key}", defaultKey);
+
+            string[] commands = commandString.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            int result = await runner.RunProcessAsync(config.GpgExeName, "gpg", null, commands);
 
             switch (result)
             {

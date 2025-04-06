@@ -5,68 +5,78 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using Serilog;
-using Serilog.Core;
 
 using VNLib.Tools.Build.Executor.Model;
 using VNLib.Tools.Build.Executor.Modules;
 using VNLib.Tools.Build.Executor.Extensions;
 using VNLib.Tools.Build.Executor.Constants;
 using VNLib.Tools.Build.Executor.Publishing;
+using VNLib.Tools.Build.Executor.Directories;
 
 namespace VNLib.Tools.Build.Executor
 {
-
-    public sealed class BuildPipeline(Logger Log) : IDisposable
+    public sealed class BuildPipeline(BuildConfig config) : IDisposable
     {
-        private readonly List<ModuleBase> _allModules = new();
-        private readonly List<ModuleBase> _selected = new();
+        private readonly ILogger Log = config.Log;
+        private readonly List<ModuleBase> _allModules = [];
+        private readonly List<ModuleBase> _selected = [];
         private readonly LinkedList<ModuleBase> _outdatedModules = new();
         private readonly LinkedList<IProject> _modifiedProjects = new();
         private readonly TaskfileVars _taskVars = new();
+        private readonly GlobalDirIndex _dirIndex = new(config);
 
         /// <summary>
         /// Loads a modules within the working directory
         /// </summary>
         /// <returns>A task that completes when all modules and child projects are loaded</returns>
-        public async Task LoadAsync(BuildConfig config, string[] only, string[] exclude, IFeedManager[] feeds)
+        public async Task LoadAsync(string[] include, string[] exclude)
         {
-            //Init task variables
-            SetTaskVariables(config.Index, feeds);
+            //Directory variables will be overriden in modules and projects
+            _taskVars.Set("BUILD_DIR", _dirIndex.GetDirectory(VnbuildDir.Build));
+            _taskVars.Set("SCRATCH_DIR", _dirIndex.GetDirectory(VnbuildDir.Scratch));
+            _taskVars.Set("OUTPUT_DIR", _dirIndex.GetDirectory(VnbuildDir.Output));
+            _taskVars.Set("WORKING_DIR", _dirIndex.GetDirectory(VnbuildDir.Working));
+
+            _taskVars.Set("UNIX_MS", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
+            _taskVars.Set("DATE", DateTimeOffset.Now.ToString("d"));
 
             //Capture all modules within pwd
-            Log.Information("Discovering modules in {pwd}", config.Index.BaseDir.FullName);
+            Log.Information("Discovering modules in {pwd}", _dirIndex.GetDirectory(VnbuildDir.Working));
 
-            //Search for .git repos
-            DirectoryInfo[] moduleDirs = config.Index.BaseDir.EnumerateDirectories(".git", SearchOption.AllDirectories)
-                .Select(static s => s.Parent!)
-                .ToArray();
+            IEnumerable<ModuleConfig> mods = await BuildFileExplorer.DiscoverModulesAsync(config, _dirIndex);
 
             //Add modules
-            foreach(DirectoryInfo dir in moduleDirs)
+            foreach (ModuleConfig mod in mods)
             {
-                _allModules.Add(new GitCodeModule(config, dir));
+                _allModules.Add(new GitCodeModule(config, mod, _dirIndex));
             }
 
-            Log.Information("Found {c} modules, loading modules...", moduleDirs.Length);
+            Log.Information("Found {c} modules, loading modules...", mods.Count());
 
             //Load all modules async and give them each a copy of our local task variables
             await _allModules.RunAllAsync(p => p.LoadAsync(_taskVars.Clone()));
 
             //Only include desired modules
-            if (only.Length > 0)
+            if (include.Length > 0)
             {
-                Log.Information("Only including modules {mods}", only);
+                Log.Information("Only including modules {mods}", include);
 
-                ModuleBase[] onlyMods = _allModules.Where(m => only.Contains(m.ModuleName, StringComparer.OrdinalIgnoreCase)).ToArray();
+                ModuleBase[] onlyMods = _allModules
+                    .Where(m => include.Contains(m.ModuleName, StringComparer.OrdinalIgnoreCase))
+                    .ToArray();
+                
                 _selected.AddRange(onlyMods);
             }
             //Exclude given modules
-            else if(exclude.Length > 0)
+            else if (exclude.Length > 0)
             {
                 Log.Information("Excluding modules {mods}", exclude);
 
-                ModuleBase[] excludeMods = _allModules.Where(m => exclude.Contains(m.ModuleName, StringComparer.OrdinalIgnoreCase)).ToArray();
-                _selected.AddRange(_allModules.Except(excludeMods));               
+                ModuleBase[] excludeMods = _allModules
+                    .Where(m => exclude.Contains(m.ModuleName, StringComparer.OrdinalIgnoreCase))
+                    .ToArray();
+                
+                _selected.AddRange(_allModules.Except(excludeMods));
             }
             else
             {
@@ -74,7 +84,7 @@ namespace VNLib.Tools.Build.Executor
                 _selected.AddRange(_allModules);
             }
 
-            Log.Information("The following modules will be processed\n{mods}",  _selected.Select(m => m.ModuleName));
+            Log.Information("The following modules will be processed\n{mods}", _selected.Select(m => m.ModuleName));
         }
 
         /// <summary>
@@ -82,18 +92,6 @@ namespace VNLib.Tools.Build.Executor
         /// </summary>
         /// <returns>The collection of all loaded modules</returns>
         public IReadOnlyCollection<IModuleData> GetModules() => _selected;
-
-        private void SetTaskVariables(IDirectoryIndex dirIndex, IFeedManager[] feeds)
-        {
-            //Configure variables
-            _taskVars.Set("BUILD_DIR", dirIndex.BuildDir.FullName);
-            _taskVars.Set("SCRATCH_DIR", dirIndex.ScratchDir.FullName);
-            _taskVars.Set("UNIX_MS", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
-            _taskVars.Set("DATE", DateTimeOffset.Now.ToString("d"));
-
-            //Add all feed manager to task variables
-            Array.ForEach(feeds, f => f.AddVariables(_taskVars));
-        }
 
         /// <summary>
         /// Synchronizes all modules with their respective remote repositories
@@ -137,8 +135,11 @@ namespace VNLib.Tools.Build.Executor
             //if one or more modules have been modified, we need to determine dependencies
             if (_outdatedModules.Count > 0)
             {
+
                 //Get the initial list of projects that will be rebuilt
-                string[] outDatedProjects = _outdatedModules.SelectMany(static m => m.Projects.Where(static p => !p.UpToDate).Select(static p => p.ProjectFile.Name)).ToArray();
+                string[] outDatedProjects = _outdatedModules
+                    .SelectMany(static m => m.Projects.Where(static p => !p.UpToDate).Select(static p => p.Config.ProjectName))
+                    .ToArray();
 
                 do
                 {
@@ -152,7 +153,8 @@ namespace VNLib.Tools.Build.Executor
                                         .Where(
                                             m => m.GetExternalDependencies()
                                             .Where(externProj => outDatedProjects.Contains(externProj))
-                                            .Any())
+                                            .Any()
+                                        )
                                         .ToArray();
 
                     //If there are no more dependants, exit loop
@@ -169,7 +171,9 @@ namespace VNLib.Tools.Build.Executor
                     }
 
                     //update outdated projects list to include projects from the newly outdated modules
-                    outDatedProjects = dependants.SelectMany(static p => p.GetExternalDependencies()).ToArray();
+                    outDatedProjects = dependants
+                        .SelectMany(static p => p.GetExternalDependencies())
+                        .ToArray();
                 }
                 while (true);
             }
@@ -216,7 +220,7 @@ namespace VNLib.Tools.Build.Executor
                 );
 
             //Find project
-            IProject project = module.Projects.FirstOrDefault(p => string.Equals(p.ProjectName, projectName, StringComparison.OrdinalIgnoreCase))
+            IProject project = module.Projects.FirstOrDefault(p => string.Equals(p.Config.ProjectName, projectName, StringComparison.OrdinalIgnoreCase))
                 ?? throw new BuildStepFailedException(
                     message: $"Project {projectName} not found in module {moduleName}",
                     moduleName
@@ -275,7 +279,7 @@ namespace VNLib.Tools.Build.Executor
         {
             Log.Information("Preparing pipline output");
 
-            if(publisher.SignEnabled)
+            if (publisher.SignEnabled)
             {
                 //Sign all modules synchronously so gpg-agent doesn't get overloaded
                 foreach (IModuleData module in _selected)
@@ -327,6 +331,10 @@ namespace VNLib.Tools.Build.Executor
             {
                 await module.CleanAsync();
             }
+
+            //Delete the build directory and all its contents
+            string buildDir = _dirIndex.GetDirectory(VnbuildDir.Build);
+            Directory.Delete(buildDir, recursive: true);
         }
 
         public void Dispose()

@@ -1,77 +1,70 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.IO;
+using System.Text.Json.Serialization;
 
-using Semver;
-
-using VNLib.Tools.Build.Executor.Model;
+using Serilog.Core;
 
 namespace VNLib.Tools.Build.Executor.Constants
 {
     public sealed class BuildConfig
     {
-        [JsonPropertyName("soure_file_extensions")]
-        public string[] SourceFileEx { get; set; } = [
-            "c",
-            "cpp",
-            "cxx",
-            "h",
-            "hpp",
-            "cs",
-            "proj",
-            "sln",
-            "ts",
-            "js",
-            "java",
-            "json",
-            "yaml",
-            "yml",
-        ];
+        [JsonIgnore]
+        public Logger Log { get; set; }
 
-        [JsonPropertyName("excluded_dirs")]
-        public string[] ExcludedSourceDirs { get; set; } = [
-            "bin",
-            "obj",
-            "packages",
-            "node_modules",
-            "dist",
-            "build",
-            "out",
-            "target",
-        ];
+        [JsonIgnore]
+        public bool DryRun { get; set; }
+
+        [JsonIgnore]
+        public bool Force { get; set; }
+
+        [JsonIgnore]
+        public bool Confirm { get; set; }
+
+        [JsonIgnore]
+        public string WorkingDirectory { get; set; } = Directory.GetCurrentDirectory();
 
         [JsonPropertyName("default_sha_method")]
         public string HashFuncName { get; set; } = "sha256";
 
-        [JsonPropertyName("head_file_name")]
-        public string HeadFileName { get; set; } = "@latest";
-
-        [JsonPropertyName("module_task_file_name")]
-        public string ModuleTaskFileName { get; set; } = "Module.Taskfile.yaml";
-
-        [JsonPropertyName("main_taskfile_name")]
-        public string MainTaskFileName { get; set; } = "build.taskfile.yaml";
-
-        [JsonPropertyName("output_file_type")]
-        public string OutputFileType { get; set; } = "*.tgz";
-
         [JsonPropertyName("task_exe_name")]
         public string TaskExeName { get; set; } = "task";
 
-        [JsonPropertyName("source_archive_name")]
-        public string SourceArchiveName { get; set; } = "archive.tgz";
+        [JsonPropertyName("build_directory")]
+        public string BuildDirectory { get; set; } = "build";
 
-        [JsonPropertyName("source_archive_format")]
-        public string SourceArchiveFormat { get; set; } = "tgz";
+        /// <summary>
+        /// The default log template for the build system
+        /// </summary>
+        [JsonPropertyName("log_template")]
+        public string LogTemplate { get; set; } = "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}";
 
-        [JsonPropertyName("project_bin_dir")]
-        public string ProjectBinDir { get; set; } = "bin";
+        /// <summary>
+        /// The search pattern to use when searching for git directories
+        /// </summary>
+        [JsonPropertyName("git_dir_pattern")]
+        public string GitDirName { get; set; } = ".git";
 
-        [JsonPropertyName("default_ci_version")]
-        public string DefaultCiVersion { get; set; } = "0.1.0";
+        /// <summary>
+        /// The name of the module level vnbuild.json file
+        /// </summary>
+        [JsonPropertyName("module_configle_file")]
+        public string ModuleConfigFileName { get; set; } = ".vnbuild-module.json";
 
-        [JsonPropertyName("semver_style")]
-        public SemVersionStyles SemverStyle { get; set; }
+        /// <summary>
+        /// The gitversion dotnet tool path
+        /// </summary>
+        [JsonPropertyName("gitversion_tool_path")]
+        public string GitversionToolPath { get; set; } = "dotnet-gitversion";
 
-        [JsonIgnore]
-        public IDirectoryIndex Index { get; set; } = default!;
+        /// <summary>
+        /// The command to pass to gpg for signing files
+        /// </summary>
+        [JsonPropertyName("gpg_command")]
+        public string GpgCommand { get; set; } = "--detach-sign {file}";
+
+        /// <summary>
+        /// The name of the gpg executable
+        /// </summary>
+        [JsonPropertyName("gpg_exe_name")]
+        public string GpgExeName { get; set; } = "gpg";
     }
 }

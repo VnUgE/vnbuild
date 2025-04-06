@@ -11,7 +11,7 @@ using VNLib.Tools.Build.Executor.Constants;
 
 namespace VNLib.Tools.Build.Executor.Publishing
 {
-    internal sealed class FtpUploadManager(AsyncFtpClient client, string remotePath) : IUploadManager
+    internal sealed class FtpUploadManager(BuildConfig config, AsyncFtpClient client, string remotePath) : IUploadManager
     {
         public async Task UploadDirectoryAsync(string path)
         {
@@ -32,7 +32,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
                 switch (fileResult.ToStatus())
                 {
                     case FtpStatus.Success:
-                        Config.Log.Information(
+                        config.Log.Information(
                             "Uploaded {size} bytes, {0} -> {1}",
                             fileResult.Size, 
                             fileResult.LocalPath, 
@@ -41,11 +41,11 @@ namespace VNLib.Tools.Build.Executor.Publishing
                         break;
 
                     case FtpStatus.Skipped:
-                        Config.Log.Information("Skipped {0} -> {1}", fileResult.LocalPath, fileResult.RemotePath);
+                        config.Log.Information("Skipped {0} -> {1}", fileResult.LocalPath, fileResult.RemotePath);
                         break;
 
                     case FtpStatus.Failed:
-                        Config.Log.Warning(
+                        config.Log.Warning(
                             "Failed to upload {0}, reason: {exp}", 
                             fileResult.LocalPath, 
                             fileResult.Exception?.Message
@@ -56,7 +56,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
         }
 
         [return: NotNullIfNotNull(nameof(serverAddress))]
-        public static IUploadManager? Create(string? serverAddress)
+        public static IUploadManager? Create(BuildConfig config, string? serverAddress)
         {
             if(string.IsNullOrWhiteSpace(serverAddress))
             {
@@ -75,7 +75,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
 
                 Config = new()
                 {
-                    LogToConsole = Config.Log.IsEnabled(Serilog.Events.LogEventLevel.Verbose),
+                    LogToConsole = config.Log.IsEnabled(Serilog.Events.LogEventLevel.Verbose),
 
                     //Disable senstive logging in case running in automated CI pipelines where logs may be published
                     LogUserName = false,
@@ -92,7 +92,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
                 },
             };
 
-            return new FtpUploadManager(client, serverUri.LocalPath);
+            return new FtpUploadManager(config, client, serverUri.LocalPath);
         }
     }
 }

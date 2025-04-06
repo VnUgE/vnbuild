@@ -2,10 +2,10 @@
 using System.IO;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using VNLib.Tools.Build.Executor.Model;
 using VNLib.Tools.Build.Executor.Constants;
-using static VNLib.Tools.Build.Executor.Constants.Utils;
 
 namespace VNLib.Tools.Build.Executor
 {
@@ -24,8 +24,10 @@ namespace VNLib.Tools.Build.Executor
     /// <summary>
     /// Represents a controller for the TaskFile build system
     /// </summary>
-    public sealed class TaskFile(string taskFilePath, Func<string> moduleName)
+    public sealed class TaskFile(BuildConfig build, ModuleConfig mod)
     {
+        private readonly ProcessRunner _runner = new(build);
+
         /// <summary>
         /// Executes the desired Taskfile command with the given user args for 
         /// the configured manager.
@@ -35,15 +37,12 @@ namespace VNLib.Tools.Build.Executor
         /// <returns>A task that completes with the status code of the operation</returns>
         public async Task ExecCommandAsync(ITaskfileScope scope, TaskfileComamnd command, bool throwIfFailed)
         {
-            //Get working copy of vars
-            IReadOnlyDictionary<string, string> vars = scope.TaskVars.GetVariables();
-
             //Specify taskfile if it is set
             List<string> args = [];
-            if(!string.IsNullOrWhiteSpace(scope.TaskfileName))
+            if (!string.IsNullOrWhiteSpace(scope.TaskfileName))
             {
                 //If taskfile is set, we need to make sure it is in the working dir to execute it, otherwise just exit
-                if(!File.Exists(Path.Combine(scope.WorkingDir.FullName, scope.TaskfileName)))
+                if (!File.Exists(Path.Combine(scope.WorkingDir.FullName, scope.TaskfileName)))
                 {
                     return;
                 }
@@ -52,15 +51,26 @@ namespace VNLib.Tools.Build.Executor
                 args.Add(scope.TaskfileName);
             }
 
+            //Add dryrun flag if set
+            if (build.DryRun)
+            {
+                args.Add("--dry");
+            }
+
+            if (build.Force)
+            {
+                args.Add("--force");
+            }
+
             string logName;
 
-            if(scope is IProject proj)
+            if (scope is IProject proj)
             {
-                logName = proj.ProjectName;
+                logName = proj.Config.ProjectName;
             }
-            else if(scope is IModuleData mod)
+            else if (scope is IModuleData mod)
             {
-                logName = mod.ModuleName;
+                logName = mod.Config.ModuleName;
             }
             else
             {
@@ -71,9 +81,15 @@ namespace VNLib.Tools.Build.Executor
             args.Add(GetCommand(command));
 
             //Exec task in the module dir
-            int result = await RunProcessAsync(taskFilePath, logName, scope.WorkingDir, [.. args], vars);
-            
-            if(throwIfFailed)
+            int result = await _runner.RunProcessAsync(
+                process: build.TaskExeName,
+                logName,
+                scope.WorkingDir,
+                args: [.. args],
+                env: scope.TaskVars.GetVariables()
+            );
+
+            if (throwIfFailed)
             {
                 ThrowIfStepFailed(scope, result, command);
             }
@@ -102,12 +118,27 @@ namespace VNLib.Tools.Build.Executor
                 case 200:   //Named task not found
                     return;
                 case 201:
-                    Utils.ThrowIfStepFailed(
+                    ThrowIfStepFailed(
                         status: false, 
                         message: $"Task failed to execute task command {cmd} for {scope.WorkingDir.Name}", 
-                        moduleName.Invoke()
+                        mod.ModuleName
                     );
                     return;
+            }
+        }
+
+        /// <summary>
+        /// Throws a <see cref="BuildStepFailedException"/> if the value
+        /// of <paramref name="status"/> is false
+        /// </summary>
+        /// <param name="status">If false throws exception</param>
+        /// <param name="message">The message to display</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ThrowIfStepFailed(bool status, string message, string artifactName)
+        {
+            if (!status)
+            {
+                throw new BuildStepFailedException(message, artifactName);
             }
         }
     }

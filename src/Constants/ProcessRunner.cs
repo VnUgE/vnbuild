@@ -4,16 +4,11 @@ using System.Threading;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-
-using static VNLib.Tools.Build.Executor.Constants.Config;
 
 namespace VNLib.Tools.Build.Executor.Constants
 {
-
-    internal static class Utils
+    internal sealed class ProcessRunner(BuildConfig config)
     {
-
         /// <summary>
         /// Runs a process by its name/exe file path, and writes its stdout/stderr to 
         /// the default build log
@@ -21,11 +16,11 @@ namespace VNLib.Tools.Build.Executor.Constants
         /// <param name="process">The name of the process to run</param>
         /// <param name="args">CLI arguments to pass to the process</param>
         /// <returns>The process exit code</returns>
-        public static async Task<int> RunProcessAsync(
-            string process, 
+        public async Task<int> RunProcessAsync(
+            string process,
             string logName,
-            DirectoryInfo? workingDir, 
-            string[] args, 
+            DirectoryInfo? workingDir,
+            string[] args,
             IReadOnlyDictionary<string, string>? env = null
         )
         {
@@ -64,7 +59,7 @@ namespace VNLib.Tools.Build.Executor.Constants
             //Start the process
             proc.Start();
 
-            Log.Debug("Starting process {proc}, with args {args}", proc.ProcessName, args);
+            config.Log.Debug("Starting process {proc} in {dir}, with args {args}", proc.ProcessName, psi.WorkingDirectory, args);
             Console.WriteLine();
 
             //Log std out
@@ -78,13 +73,13 @@ namespace VNLib.Tools.Build.Executor.Constants
             await Task.WhenAll(stdout, stdErr, wfe);
 
             Console.WriteLine();
-            Log.Debug("[CHILD]:{id}:{p} exited w/ code {code}", proc.ProcessName, proc.Id, proc.ExitCode);
+            config.Log.Debug("[CHILD]:{id}:{p} exited w/ code {code}", proc.ProcessName, proc.Id, proc.ExitCode);
 
             //Return status code
             return proc.ExitCode;
         }
 
-        private static async Task LogStdOutAsync(Process psi, string logName, CancellationToken cancellation)
+        private async Task LogStdOutAsync(Process psi, string logName, CancellationToken cancellation)
         {
             try
             {
@@ -107,11 +102,11 @@ namespace VNLib.Tools.Build.Executor.Constants
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "An exception was raised while reading the process standard output");
+                config.Log.Error(ex, "An exception was raised while reading the process standard output");
             }
         }
 
-        private static async Task LogStdErrAsync(Process psi, string logName, CancellationToken cancellation)
+        private async Task LogStdErrAsync(Process psi, string logName, CancellationToken cancellation)
         {
             try
             {
@@ -134,25 +129,8 @@ namespace VNLib.Tools.Build.Executor.Constants
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "An exception was raised while reading the process standard output");
+                config.Log.Error(ex, "An exception was raised while reading the process standard output");
             }
         }
-
-
-        /// <summary>
-        /// Throws a <see cref="BuildStepFailedException"/> if the value
-        /// of <paramref name="status"/> is false
-        /// </summary>
-        /// <param name="status">If false throws exception</param>
-        /// <param name="message">The message to display</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ThrowIfStepFailed(bool status, string message, string artifactName)
-        {
-            if (!status)
-            {
-                throw new BuildStepFailedException(message, artifactName);
-            }
-        }
-    
     }
 }

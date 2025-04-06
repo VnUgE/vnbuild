@@ -8,19 +8,19 @@ using System.Collections.Generic;
 
 using LibGit2Sharp;
 
-using Semver;
-
 using VNLib.Tools.Build.Executor.Constants;
 using VNLib.Tools.Build.Executor.Model;
 using VNLib.Tools.Build.Executor.Extensions;
 using VNLib.Tools.Build.Executor.Projects;
-using static VNLib.Tools.Build.Executor.Constants.Config;
+using VNLib.Tools.Build.Executor.Directories;
 
 namespace VNLib.Tools.Build.Executor.Publishing
 {
 
     public sealed class BuildPublisher(BuildConfig config, GpgSigner signer)
     {
+        private readonly IDirectoryIndex _index = new GlobalDirIndex(config);
+
         public bool SignEnabled => signer.IsEnabled;
 
         /// <summary>
@@ -37,22 +37,22 @@ namespace VNLib.Tools.Build.Executor.Publishing
             //Copy source archive
             string? archiveFile = await CopySourceArchiveToOutput(module, module.FileManager);
 
-            Log.Information("Building module {mod} catalog and git history", module.ModuleName);
+            config.Log.Information("Building module {mod} catalog and git history", module.Config.ModuleName);
 
             //Build module catalog
-            await BuildModuleCatalogAsync(module, config.SemverStyle, archiveFile);
+            await BuildModuleCatalogAsync(module, archiveFile);
 
-            Log.Information("Building module {mod} git history", module.ModuleName);
+            config.Log.Information("Building module {mod} git history", module.Config.ModuleName);
 
             //Build git history
             await BuildModuleGitHistoryAsync(module);
 
-            Log.Information("Building module {mod} version history", module.ModuleName);
+            config.Log.Information("Building module {mod} version history", module.Config.ModuleName);
 
             //build version history
             await BuildModuleVersionHistory(module);
 
-            Log.Information("Moving module {mod} artifacts to the output", module.ModuleName);
+            config.Log.Information("Moving module {mod} artifacts to the output", module.Config.ModuleName);
         }
 
         /// <summary>
@@ -62,23 +62,23 @@ namespace VNLib.Tools.Build.Executor.Publishing
         /// <returns></returns>
         public Task UploadModuleOutput(IUploadManager Uploader, IModuleData module)
         {
-            Log.Information("Uploading module {mod}", module.ModuleName);
+            config.Log.Information("Uploading module {mod}", module.Config.ModuleName);
 
             //Upload the entire output directory
-            return Uploader.UploadDirectoryAsync(module.FileManager.OutputDir);
+            return Uploader.UploadDirectoryAsync(_index.GetDirectory(VnbuildDir.Output, module.Config));
         }
 
         /*
         * Builds the project catalog file and publishes it to the module file manager
         */
-        private async Task BuildModuleCatalogAsync(IModuleData mod, SemVersionStyles style, string? archiveFile)
+        private async Task BuildModuleCatalogAsync(IModuleData mod, string? archiveFile)
         {
             /*
              * Builds the index.json file for the module. It 
              * contains an array of projects and their metadata
              */
 
-            string moduleVersion = mod.GetModuleCiVersion(config.DefaultCiVersion, style);
+            string moduleVersion = mod.GetVersionString();
 
             using MemoryStream ms = new();
 
@@ -95,17 +95,17 @@ namespace VNLib.Tools.Build.Executor.Publishing
                     writer.WriteStartObject("archive");
 
                     //Archive path is in the build directory
-                    writer.WriteString("path", config.SourceArchiveName);
+                    writer.WriteString("path", mod.Config.SourceArchiveName);
 
                     //Get the checksum of the archive
                     string checksum = await new FileInfo(archiveFile).ComputeFileHashStringAsync();
                     writer.WriteString(config.HashFuncName, checksum);
-                    writer.WriteString("sha_file", $"{config.SourceArchiveName}.{config.HashFuncName}");
+                    writer.WriteString("sha_file", $"{mod.Config.SourceArchiveName}.{config.HashFuncName}");
 
                     //If signing is enabled, add the signature file (it is constant)
                     if (SignEnabled)
                     {
-                        writer.WriteString("signature", $"{config.SourceArchiveName}.sig");
+                        writer.WriteString("signature", $"{mod.Config.SourceArchiveName}.sig");
                     }
 
                     writer.WriteEndObject();
@@ -237,6 +237,22 @@ namespace VNLib.Tools.Build.Executor.Publishing
         }
 
         /*
+         * Projects may define a list of required artifacts that must be 
+         * present in the output directory. This method verifies that all
+         * required artifacts are present. 
+         */
+        private static void VerifyArtifactBos(IProject project, FileInfo[] artifacts)
+        {
+            foreach (string expected in project.GetRequiredArtifacts())
+            {
+                if (artifacts.All(f => !string.Equals(f.Name, expected, StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new BuildFailedException($"Missing expected artifact '{expected}' for project {project.Config.ProjectName}");
+                }
+            }
+        }
+
+        /*
          * Captures all of the project artiacts and copies them to the module output directory
          */
         private async Task CopyProjectOutputToModuleOutputAsync(IModuleData mod)
@@ -244,9 +260,12 @@ namespace VNLib.Tools.Build.Executor.Publishing
             //Copy build artifacts to module output directory
             await mod.Projects.RunAllAsync(project =>
             {
+                FileInfo[] actualFiles = project.GetProjectBuildFiles(mod.Config).ToArray();
+
+                VerifyArtifactBos(project, actualFiles);
+
                 //Get all output files from the project build, and copy them to the module output directory
-                return project.GetProjectBuildFiles(config)
-                .RunAllAsync(artifact => mod.FileManager.CopyArtifactToOutputAsync(project, artifact));
+                return actualFiles.RunAllAsync(artifact => mod.FileManager.CopyArtifactToOutputAsync(project, artifact));
             });
 
             /*
@@ -254,16 +273,16 @@ namespace VNLib.Tools.Build.Executor.Publishing
              */
             if (SignEnabled)
             {
-                Log.Information("GPG Siginig is enabled, signing all artifacts for module {mod}", mod.ModuleName);
+                config.Log.Information("GPG Siginig is enabled, signing all artifacts for module {mod}", mod.Config.ModuleName);
 
                 /*
                  * Get all of the artifacts from the module's projects that match the target output 
                  * file type, and sign them
                  */
                 IEnumerable<FileInfo> artifacts = mod.Projects.SelectMany(
-                            p => mod.FileManager.GetArtifactOutputDir(p)
-                            .EnumerateFiles(config.OutputFileType, SearchOption.TopDirectoryOnly)
-                        );
+                    p => mod.FileManager.GetArtifactOutputDir(p)
+                    .EnumerateFiles(mod.Config.OutputFileType, SearchOption.TopDirectoryOnly)
+                );
 
                 //Sign synchronously
                 foreach (FileInfo artifact in artifacts)
@@ -277,9 +296,19 @@ namespace VNLib.Tools.Build.Executor.Publishing
         private static void InitModuleFile(Utf8JsonWriter writer, IModuleData mod)
         {
             //Set object name
-            writer.WriteString("module_name", mod.ModuleName);
+            writer.WriteString("module_name", mod.Config.ModuleName);
             //Modified date
             writer.WriteString("modifed_date", DateTime.UtcNow);
+
+            writer.WriteString("version", mod.GetVersionString());
+            writer.WriteString("semver", mod.GetVersionString());
+
+            writer.WriteString("branch", mod.Repository.Head.TrackedBranch.FriendlyName);
+            writer.WriteString("author_name", mod.Repository.Head.Tip.Author.Name);
+            writer.WriteString("author_email", mod.Repository.Head.Tip.Author.Email);
+            writer.WriteString("commit_date", mod.Repository.Head.Tip.Author.When);
+            writer.WriteString("commit_message", mod.Repository.Head.Tip.Message);
+            writer.WriteString("commit_hash", mod.Repository.Head.Tip.Sha);
         }
 
         private static void WriteCommitHistory(Utf8JsonWriter writer, Repository repo)
@@ -349,7 +378,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
                 await mp.LoadProjectDom();
             }
 
-            writer.WriteString("name", project.ProjectName);
+            writer.WriteString("name", project.Config.ProjectName);
             writer.WriteString("repo_url", project.ProjectData.RepoUrl);
             writer.WriteString("description", project.ProjectData.Description);
             writer.WriteString("version", version);
@@ -404,16 +433,21 @@ namespace VNLib.Tools.Build.Executor.Publishing
         private async Task<string?> CopySourceArchiveToOutput(IModuleData mod, IModuleFileManager man)
         {
             //Try to get a source archive in the module directory
-            string? archiveFile = Directory.EnumerateFiles(mod.Repository.Info.WorkingDirectory, config.SourceArchiveName, SearchOption.TopDirectoryOnly).FirstOrDefault();
+            string? archiveFile = Directory.EnumerateFiles(
+                 path:_index.GetDirectory(VnbuildDir.Working, mod.Config),
+                 searchPattern: mod.Config.SourceArchiveName, 
+                 SearchOption.TopDirectoryOnly
+            )
+                .FirstOrDefault();
 
             //If archive is null ignore and continue
             if (string.IsNullOrWhiteSpace(archiveFile))
             {
-                Log.Information("No archive file found for module {mod}", mod.ModuleName);
+                config.Log.Information("No archive file found for module {mod}", mod.Config.ModuleName);
                 return null;
             }
 
-            Log.Information("Found source archive for module {mod}, copying to output...", mod.ModuleName);
+            config.Log.Information("Found source archive for module {mod}, copying to output...", mod.Config.ModuleName);
 
             //Otherwise copy to output
             byte[] archive = await File.ReadAllBytesAsync(archiveFile);

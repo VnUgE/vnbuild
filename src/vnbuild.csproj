@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -12,12 +12,13 @@
     <Authors>Vaughn Nugent</Authors>
     <Company>Vaughn Nugent</Company>
     <Description>Automatically builds and produces binaries from git-based modules with proper indexing for web based deployments</Description>
-    <Copyright>Copyright © 2024 Vaughn Nugent</Copyright>
+    <Copyright>Copyright © 2025 Vaughn Nugent</Copyright>
     <Product>vnbuild</Product>
     <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/vnbuild</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VnUgE/vnbuild/</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <Artifacts>linux-x64-release.tgz,linux-arm-release.tgz,linux-arm64-release.tgz,win-x64-release.tgz,win-arm64-release.tgz,osx-x64-release.tgz,osx-arm64-release.tgz</Artifacts>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,12 +34,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentFTP" Version="51.0.0" />
+    <PackageReference Include="FluentFTP" Version="52.1.0" />
     <PackageReference Include="Typin" Version="3.1.0" />
-    <PackageReference Include="LibGit2Sharp" Version="0.30.0" />
+    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
     <PackageReference Include="Microsoft.Build" Version="17.11.4" />
-    <PackageReference Include="Semver" Version="2.3.0" />
-    <PackageReference Include="Serilog" Version="4.0.1" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>

@@ -9,23 +9,23 @@ namespace VNLib.Tools.Build.Executor.Projects
 {
     internal sealed class NativeProjectDom : IProjectData
     {
-        private Dictionary<string, string> _properties;
-
-        internal NativeProjectDom()
-        {
-            _properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        }
+        private readonly Dictionary<string, string> _properties = new(StringComparer.OrdinalIgnoreCase);     
 
         public string? this[string index] => _properties.GetValueOrDefault(index);
 
         public string? Description => this["description"];
+        
         public string? Authors => this["author"];
+        
         public string? Copyright => this["copyright"];
+        
         public string? VersionString => this["version"];
+        
         public string? CompanyName => this["company"];
+        
         public string? Product => this["name"];
+
         public string? RepoUrl => this["repository"];
-        public string? OutputDir => this["output_dir"];
 
         public string[] GetProjectRefs()
         {
@@ -47,7 +47,7 @@ namespace VNLib.Tools.Build.Executor.Projects
             //Load new properties that are strings only
             foreach (JsonProperty prop in doc.RootElement.EnumerateObject())
             {
-                if(prop.Value.ValueKind == JsonValueKind.String)
+                if (prop.Value.ValueKind == JsonValueKind.String)
                 {
                     _properties[prop.Name] = prop.Value.GetString() ?? string.Empty;
                 }

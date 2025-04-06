@@ -1,4 +1,4 @@
-version: 35
+version: 37
 jobs:
 - name: Push to GitHub
   steps:
@@ -18,42 +18,57 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
-- name: Pull from GitHub
+- name: Mock Build
+  jobExecutor: windows
   steps:
-  - !PullRepository
-    name: Sync from GitHub
-    remoteUrl: https://github.com/VnUgE/vnbuild.git
-    userName: VnUgE
-    passwordSecret: git-access-token
-    refs: refs/heads/* refs/tags/*
-    withLfs: false
-    force: false
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
-  triggers:
-  - !ScheduleTrigger
-    cronExpression: 0 15 10 ? * *
-    projects: vnbuild
-  retryCondition: never
-  maxRetries: 3
-  retryDelay: 30
-  timeout: 3600
-
-- name: Build and publish
-  jobExecutor: primary-shell-executor
-  steps:
-  - !CheckoutStep
-    name: Code checkout
-    cloneCredential: !DefaultCredential {}
-    withLfs: false
-    withSubmodules: false
-    checkoutPath: '@project_name@/'
+  - !CommandStep
+    name: Checkout Code
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        git clone @server_url@/@project_name@ --branch @branch@
+    useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
     name: VNBuild build
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        vnbuild build -S --verbose
+        vnbuild build --verbose --no-delay
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: VNBuild publish
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        vnbuild publish --verbose
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !BranchUpdateTrigger
+    branches: -master
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 3600
+- name: Build and publish
+  jobExecutor: publish-agents
+  steps:
+  - !CommandStep
+    name: Checkout Code
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        git clone @server_url@/@project_name@ --branch @branch@
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: VNBuild build
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        vnbuild build --no-delay
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep

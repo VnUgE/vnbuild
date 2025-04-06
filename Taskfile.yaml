@@ -2,68 +2,75 @@
 
 version: '3'
 
-vars:
-  INT_DIR: '{{.SCRATCH_DIR}}/obj/{{.MODULE_NAME}}/'
-  TARGET: '{{.USER_WORKING_DIR}}/bin'  
-  RELEASE_DIR: "./bin/release/{{.TARGET_FRAMEWORK}}"
+includes:
+  module: 
+    taskfile: './Module.Taskfile.yaml'
+    internal: true
 
 tasks:
-  
   #when build succeeds, archive the output into a tgz 
   postbuild_success:
-    dir: '{{.USER_WORKING_DIR}}'
+    dir: '{{ .USER_WORKING_DIR }}'
+    vars:
+      RELEASE_DIR: "./bin/release/{{ .TARGET_FRAMEWORK }}"  
     cmds:
       #pack up source code and put in output
-     - powershell -Command "Get-ChildItem -Include *.cs,*.csproj -Recurse | Where { \$_.FullName -notlike '*\obj\*' } | Resolve-Path -Relative | tar --files-from - -czf '{{.TARGET}}/src.tgz'"
+     - task: pack_source
 
-      #remove uncessary files from the release dir
-     - powershell -Command "Get-ChildItem -Recurse '{{ .RELEASE_DIR }}/' -Include *.pdb,*.xml | Remove-Item"
+      #remove unnecessary files from the release dir
+     - cmd: powershell -Command "
+        Get-ChildItem 
+        -Recurse 
+        -Include *.pdb,*.xml 
+        '{{ .RELEASE_DIR }}/' 
+        | Remove-Item"
 
-     - task: posbuild_parallel
+     - task: postbuild_parallel
 
-  posbuild_parallel:
+  postbuild_parallel:
     deps:
-     - task: postbuild
-       vars: { BUILD_MODE: debug, TARGET_OS: win-x64 }
-     - task: postbuild
-       vars: { BUILD_MODE: debug, TARGET_OS: linux-x64 }
-     - task: postbuild
-       vars: { BUILD_MODE: debug, TARGET_OS: osx-x64 }
-     - task: postbuild
-       vars: { BUILD_MODE: debug, TARGET_OS: linux-arm }
-     - task: postbuild
-       vars: { BUILD_MODE: debug, TARGET_OS: linux-arm64 }
-     
-     - task: postbuild
-       vars: { BUILD_MODE: release, TARGET_OS: win-x64 }
-     - task: postbuild
-       vars: { BUILD_MODE: release, TARGET_OS: linux-x64 }
-     - task: postbuild
-       vars: { BUILD_MODE: release, TARGET_OS: osx-x64 }
-     - task: postbuild
-       vars: { BUILD_MODE: release, TARGET_OS: linux-arm }
-     - task: postbuild
-       vars: { BUILD_MODE: release, TARGET_OS: linux-arm64 }
-
+     - for: { var: TARGET_ARCHES }
+       task: postbuild
+       vars: { BUILD_MODE: release, TARGET_OS: '{{ .ITEM }}' }
 
   postbuild:
     internal: true
-    dir: '{{.USER_WORKING_DIR}}'
+    dir: '{{ .USER_WORKING_DIR }}'
     vars:
-      BUILD_DIR: "{{ .USER_WORKING_DIR }}/bin/{{ .BUILD_MODE }}/{{ .TARGET_FRAMEWORK }}/{{ .TARGET_OS }}/publish"
-    cmds:     
+      BUILD_DIR: "{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/{{ .BUILD_MODE }}/{{ .TARGET_FRAMEWORK }}/{{ .TARGET_OS }}/publish"
+      TARGET_DIR: "{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}"
+    cmds:
      #copy and readme to target
-     - cmd: cd .. && powershell -Command "Copy-Item -Path ./build.readme.txt -Destination '{{ .BUILD_DIR }}/readme.txt'"
+     - cmd: cd .. && powershell cp './build.readme.txt' '{{ .BUILD_DIR }}/readme.txt'
        ignore_error: true
 
-     #tar outputs
-     - cd "{{ .BUILD_DIR }}" && tar -czf "{{ .TARGET }}/{{ .TARGET_OS }}-{{ .BUILD_MODE }}.tgz" .
+     - cmd: cd "{{ .BUILD_DIR }}" && tar -czf "{{ .TARGET_DIR }}/{{ .TARGET_OS }}-{{ .BUILD_MODE }}.tgz" .
 
-    #Remove the output dirs on clean
+  pack_source:
+    internal: true
+    dir: '{{ .USER_WORKING_DIR }}'
+    vars:
+      EXCLUDES:
+        --exclude='src/bin/*'
+        --exclude='src/obj/*'
+        #--exclude='.tarignore'
+      INCLUDES:
+        src/*
+        LICENSE
+        Taskfile.yaml
+        README.md
+        Module.Taskfile.yaml
+        vnbuild.build.sln
+
+    cmds:
+      #pack up source code and put in output
+     - cmd: cd .. && tar {{ .EXCLUDES }} -czf '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/src.tgz' {{ .INCLUDES }}
+
+  #Remove the output dirs on clean
   clean:
-    dir: '{{.USER_WORKING_DIR}}'
+    dir: '{{ .USER_WORKING_DIR }}'
     ignore_error: true
     cmds:
      - for: [ bin/, obj/ ]
-       cmd: powershell Remove-Item -Recurse './{{.TARGET}}']
+       cmd: powershell rm -Recurse './{{ .TARGET }}'
   

@@ -40,11 +40,6 @@ namespace VNLib.Tools.Build.Executor.Model
         Task<byte[]?> ReadCheckSumAsync(IProject project);
 
         /// <summary>
-        /// The module's output directory
-        /// </summary>
-        string OutputDir { get; }
-
-        /// <summary>
         /// Copies the given file to the project's output directory
         /// </summary>
         /// <param name="project"></param>

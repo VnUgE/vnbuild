@@ -1,19 +1,16 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 
+using VNLib.Tools.Build.Executor.Constants;
+
 namespace VNLib.Tools.Build.Executor.Model
 {
     public interface IProject : ITaskfileScope
     {
         /// <summary>
-        /// Gets the the project file
+        /// The project configuration
         /// </summary>
-        FileInfo ProjectFile { get; }
-
-        /// <summary>
-        /// Gets the actual project name
-        /// </summary>
-        string ProjectName { get; }
+        ProjectConfig Config { get; }
 
         /// <summary>
         /// The msbuild project dom

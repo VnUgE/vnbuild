@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -8,45 +9,34 @@ using Typin.Console;
 using Typin.Attributes;
 
 using VNLib.Tools.Build.Executor.Model;
-using VNLib.Tools.Build.Executor.Constants;
 using VNLib.Tools.Build.Executor.Publishing;
 
 namespace VNLib.Tools.Build.Executor.Commands
 {
     [Command("publish", Description = "Runs publishig build steps on a completed build")]
-    public sealed class PublishCommand(BuildPipeline pipeline, ConfigManager bm) : BaseCommand(pipeline, bm)
+    public sealed class PublishCommand : BaseCommand
     {
-        [CommandOption("minio", Description = "The path to upload the build artifacts")]
+        [CommandOption("minio", Description = "The target path to upload artifacts to")]
         public string? MinioPath { get; set; }
 
         [CommandOption("ftp", Description = "The FTP server address to upload the build artifacts. Enables FTP mode over s3")]
         public string? FtpServerAddress { get; set; }
 
-        [CommandOption("sign", 's', Description = "Enables gpg signing of build artifacts")]
+        [CommandOption("sign", Description = "Enables gpg signing of build artifacts")]
         public bool Sign { get; set; } = false;
 
-        [CommandOption("gpg-key", 'k', Description = "Optional key to use when signing, otherwise uses the GPG default signing key")]
+        [CommandOption("gpg-key", Description = "Optional key to use when signing, otherwise uses the GPG default signing key")]
         public string? GpgKey { get; set; }
-
-        [CommandOption("sleet-path", 'F', Description = "Specifies the Sleet feed index path")]
-        public string? SleetPath { get; set; }
-
-        [CommandOption("dry-run", 'd', Description = "Executes all publish steps without pushing the changes to the remote server")]
-        public bool DryRun { get; set; }
 
         [CommandOption("output", 'o', Description = "Specifies the output directory for the published modules")]
         public string? CustomOutDir { get; set; }
 
-        public override async ValueTask ExecStepsAsync(IConsole console)
+        public override async ValueTask ExecStepsAsync(IConsole console, BuildPipeline pipeline)
         {
-            //Specify custom output dir
-            (Config.Index as Dirs)!.OutputDir = BuildDirs.GetOrCreateDir(Constants.Config.OUTPUT_DIR, CustomOutDir);
-
             IUploadManager uploads = GetUploadManager(console);
-            IFeedManager? feed = Feeds.FirstOrDefault();
 
             //Optional gpg signer for signing published artifacts
-            BuildPublisher pub = new(Config, new GpgSigner(Sign, GpgKey));
+            BuildPublisher pub = new(Config, signer: new GpgSigner(Config, Sign, GpgKey));
 
             console.WithForegroundColor(
                 ConsoleColor.DarkGreen, 
@@ -70,44 +60,39 @@ namespace VNLib.Tools.Build.Executor.Commands
             await pipeline.ManualUpload(pub, uploads)
                 .ConfigureAwait(false);
 
-            //Publish feeds
-            if (feed is not null)
-            {
-                console.WithForegroundColor(
-                    ConsoleColor.DarkGreen, 
-                    static o => o.Output.WriteLine("Uploading feeds...")
-                );
-
-                //Exec feed upload
-                await uploads.UploadDirectoryAsync(feed.FeedOutputDir);
-            }
-
             console.WithForegroundColor(
                 ConsoleColor.Green, 
                 static o => o.Output.WriteLine("Upload build complete")
             );
         }
 
-        public override IFeedManager[] Feeds => SleetPath is null ? [] : [SleetFeedManager.GetSleetFeed(SleetPath)];
-
-        private MultiUploadManager GetUploadManager(IConsole console)
+        private IUploadManager GetUploadManager(IConsole console)
         {
             try
             {
                 IUploadManager[] uploadMan = [];
 
+                if (!string.IsNullOrWhiteSpace(CustomOutDir))
+                {
+                    console.WithForegroundColor(
+                        ConsoleColor.Yellow,
+                        o => o.Output.WriteLine($"Writing module output to {CustomOutDir}. Upload is disabled")
+                    );
+                    return new LocalFileUploadManager(CustomOutDir);
+                }
+
                 if (!string.IsNullOrWhiteSpace(MinioPath))
                 {
                     console.Output.WriteLine("Creating Minio publisher");
 
-                    uploadMan = [MinioUploadManager.Create(MinioPath), ..uploadMan];
+                    uploadMan = [new MinioUploadManager(Config, MinioPath), ..uploadMan];
                 }
                 
                 if (!string.IsNullOrWhiteSpace(FtpServerAddress))
                 {
                     console.Output.WriteLine("Using FTP publisher");
 
-                    uploadMan = [FtpUploadManager.Create(FtpServerAddress), .. uploadMan];
+                    uploadMan = [FtpUploadManager.Create(Config, FtpServerAddress), .. uploadMan];
                 }
 
                 if(uploadMan.Length == 0)
@@ -135,6 +120,31 @@ namespace VNLib.Tools.Build.Executor.Commands
                 IEnumerable<Task> tasks = _managers.Select(m => m.UploadDirectoryAsync(path));
                 
                 await Task.WhenAll(tasks);
+            }
+        }
+
+        private sealed class LocalFileUploadManager(string outputDir) : IUploadManager
+        {
+            public Task UploadDirectoryAsync(string path)
+            {
+                //Create all output directories
+                Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
+                    .Select(d => new DirectoryInfo(d))
+                    .Select(dir => dir.FullName.Replace(path, outputDir))
+                    .ToList()
+                    .ForEach(d => Directory.CreateDirectory(d));
+
+                //Copy all files
+                Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
+                    .Select(f => new FileInfo(f))
+                    .ToList()
+                    .ForEach(file =>
+                    {
+                        string dest = file.FullName.Replace(path, outputDir);
+                        file.CopyTo(dest, true);
+                    });
+
+                return Task.CompletedTask;
             }
         }
     }

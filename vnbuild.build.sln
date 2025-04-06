@@ -15,6 +15,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Taskfile.yaml = Taskfile.yaml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "containers", "containers", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		containers\fedora-amd64.Dockerfile = containers\fedora-amd64.Dockerfile
+		containers\package.json = containers\package.json
+		containers\Taskfile.yaml = containers\Taskfile.yaml
+		containers\ubuntu-amd64.Dockerfile = containers\ubuntu-amd64.Dockerfile
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

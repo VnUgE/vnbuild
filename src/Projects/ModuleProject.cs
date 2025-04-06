@@ -4,16 +4,15 @@ using System.Threading.Tasks;
 
 using VNLib.Tools.Build.Executor.Model;
 using VNLib.Tools.Build.Executor.Extensions;
+using VNLib.Tools.Build.Executor.Constants;
+using VNLib.Tools.Build.Executor.Directories;
 
 namespace VNLib.Tools.Build.Executor.Projects
 {
-    internal abstract class ModuleProject : IProject
+    internal abstract class ModuleProject(ModuleConfig mod, ProjectConfig config, IDirectoryIndex index) : IProject
     {
         ///<inheritdoc/>
-        public FileInfo ProjectFile { get; }
-
-        ///<inheritdoc/>
-        public string ProjectName { get; protected set; }
+        public FileInfo ProjectFile { get; } = new(config.ProjectFilePath);
 
         ///<inheritdoc/>
         public abstract IProjectData ProjectData { get; }
@@ -22,10 +21,13 @@ namespace VNLib.Tools.Build.Executor.Projects
         public bool UpToDate { get; set; }
 
         ///<inheritdoc/>
-        public DirectoryInfo WorkingDir { get; protected set; }
-        
+        public DirectoryInfo WorkingDir { get; } = new(index.GetDirectory(VnbuildDir.Working, mod, config));
+
         ///<inheritdoc/>
         public TaskfileVars TaskVars { get; protected set; }
+
+        ///<inheritdoc/>
+        public ProjectConfig Config { get; } = config;
 
         ///<inheritdoc/>
         public string? TaskfileName { get; protected set; }
@@ -33,24 +35,8 @@ namespace VNLib.Tools.Build.Executor.Projects
         /// <summary>
         /// Gets the package info file for the project
         /// </summary>
-        protected virtual FileInfo? PackageInfoFile { get; }
+        protected virtual FileInfo? PackageInfoFile { get; } = new(config.ProjectFilePath);
 
-        public ModuleProject(FileInfo projectFile, string? projectName = null)
-        {
-            ProjectFile = projectFile;
-
-            //Default project name to the file name
-            ProjectName = projectName ?? Path.GetFileNameWithoutExtension(ProjectFile.Name);
-
-            //Default up-to-date false
-            UpToDate = false;
-
-            //Default working dir to the project file's directory
-            WorkingDir = ProjectFile.Directory!;
-
-            TaskVars = null!;
-        }
-       
         ///<inheritdoc/>
         public virtual async Task LoadAsync(TaskfileVars vars)
         {
@@ -61,8 +47,12 @@ namespace VNLib.Tools.Build.Executor.Projects
             //Set some local environment variables
 
             //Set local environment variables
-            TaskVars.Set("PROJECT_NAME", ProjectName);
+            TaskVars.Set("BINARY_DIR", this.GetBinaryDirectory(mod));
+            TaskVars.Set("SCRATCH_DIR", index.GetDirectory(VnbuildDir.Scratch, mod, Config));
+
+            TaskVars.Set("PROJECT_NAME", config.ProjectName);
             TaskVars.Set("PROJECT_DIR", WorkingDir.FullName);
+            TaskVars.Set("PROJECT_FILE", ProjectFile.FullName);
             TaskVars.Set("IS_PROJECT", bool.TrueString);
 
             //Store project vars
@@ -111,8 +101,11 @@ namespace VNLib.Tools.Build.Executor.Projects
             }
         }
 
-        public abstract void Dispose();
+        /// <inheritdoc/>
+        public virtual void Dispose()
+        { }
 
-        public override string ToString() => ProjectName;
+        /// <inheritdoc/>
+        public override string ToString() => config.ProjectName;
     }
 }

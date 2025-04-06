@@ -6,16 +6,11 @@ namespace VNLib.Tools.Build.Executor.Model
     /// <summary>
     /// Represents a collection of taskfile "environment" variables
     /// </summary>
-    public sealed class TaskfileVars
+    public sealed class TaskfileVars()
     {
-        private readonly Dictionary<string, string> vars;
+        private readonly Dictionary<string, string> vars = new(StringComparer.OrdinalIgnoreCase);
 
-        public TaskfileVars()
-        {
-            vars = new(StringComparer.OrdinalIgnoreCase);
-        }
-
-        private TaskfileVars(IEnumerable<KeyValuePair<string, string>> values)
+        private TaskfileVars(IEnumerable<KeyValuePair<string, string>> values) : this()
         {
             vars = new(values, StringComparer.OrdinalIgnoreCase);
         }

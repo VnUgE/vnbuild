@@ -5,16 +5,24 @@ using System.Threading.Tasks;
 using VNLib.Tools.Build.Executor.Model;
 using VNLib.Tools.Build.Executor.Extensions;
 using VNLib.Tools.Build.Executor.Constants;
+using VNLib.Tools.Build.Executor.Directories;
+
 
 namespace VNLib.Tools.Build.Executor.Modules
 {
-
-    public sealed class ModuleFileManager(BuildConfig config, IModuleData ModData) : IModuleFileManager
+    public sealed class ModuleFileManager(BuildConfig Config, IModuleData Mod) : IModuleFileManager
     {
-        private readonly IDirectoryIndex Index = config.Index;
+        private readonly IDirectoryIndex _index = new GlobalDirIndex(Config);
 
-        ///<inheritdoc/>
-        public string OutputDir => Path.Combine(Index.OutputDir.FullName, ModData.ModuleName);
+        /// <summary>
+        /// The output directory for the module
+        /// </summary>
+        private string OutputDir => _index.GetDirectory(VnbuildDir.Output, Mod.Config);
+
+        /// <summary>
+        /// The SHA of the current git HEAD
+        /// </summary>
+        private readonly string HeadSha = Mod.Repository.Head.Tip.Sha;
 
         ///<inheritdoc/>
         public async Task CopyArtifactToOutputAsync(IProject project, FileInfo file)
@@ -28,10 +36,10 @@ namespace VNLib.Tools.Build.Executor.Modules
             Directory.CreateDirectory(targetDir);
 
             //Copy the file to the output directory
-            FileInfo output = file.CopyTo(outputFile, true);
+            FileInfo output = file.CopyTo(outputFile, overwrite: true);
 
             //Compute the file hash of the new output file
-            await output.ComputeFileHashAsync(config.HashFuncName);
+            await output.ComputeFileHashAsync(Config.HashFuncName);
         }
 
         ///<inheritdoc/>
@@ -41,19 +49,26 @@ namespace VNLib.Tools.Build.Executor.Modules
             return new DirectoryInfo(path);
         }
 
+        private string GetChecksumFile(IProject project)
+        {
+            //Create sum file inside the module's sum directory
+            string sumDir = _index.GetDirectory(VnbuildDir.Sum, Mod.Config);
+            return Path.Combine(sumDir, $"{project.GetSafeProjectName()}.json");
+        }
+
         ///<inheritdoc/>
         public Task<byte[]?> ReadCheckSumAsync(IProject project)
         {
-            string sumFile = Path.Combine(Index.SumDir.FullName, $"{ModData.ModuleName}-{project.GetSafeProjectName()}.json");            
+            string sumFile = GetChecksumFile(project);
             return File.Exists(sumFile) ? File.ReadAllBytesAsync(sumFile) : Task.FromResult<byte[]?>(null);
         }
 
         ///<inheritdoc/>
         public Task WriteChecksumAsync(IProject project, byte[] fileData)
         {
-            //Create sum file inside the sum directory
-            string sumFile = Path.Combine(Index.SumDir.FullName, $"{ModData.ModuleName}-{project.GetSafeProjectName()}.json");
-            return File.WriteAllBytesAsync(sumFile, fileData);
+            string checksumPath = GetChecksumFile(project);
+            Directory.CreateDirectory(Path.GetDirectoryName(checksumPath)!);
+            return File.WriteAllBytesAsync(checksumPath, fileData);
         }
 
         ///<inheritdoc/>
@@ -63,16 +78,17 @@ namespace VNLib.Tools.Build.Executor.Modules
             string filePath = type switch
             {
                 //Catalog is written to the version pointed to by the latest git commit hash
-                ModuleFileType.Catalog => $"{OutputDir}/{GetLatestTagOrSha()}/index.json",
-                ModuleFileType.GitHistory => $"{OutputDir}/git.json",
-                ModuleFileType.LatestHash => $"{OutputDir}/@latest",
-                ModuleFileType.VersionHistory => $"{OutputDir}/versions.json",
+                ModuleFileType.Catalog          => $"{OutputDir}/{HeadSha}/index.json",
+                ModuleFileType.GitHistory       => $"{OutputDir}/git.json",
+                ModuleFileType.LatestHash       => $"{OutputDir}/@latest",
+                ModuleFileType.VersionHistory   => $"{OutputDir}/versions.json",
                 //Store project archive
-                ModuleFileType.Archive => $"{OutputDir}/{GetLatestTagOrSha()}/archive.tgz",
+                ModuleFileType.Archive => $"{OutputDir}/{HeadSha}/archive.tgz",
                 _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             };
 
-            await File.WriteAllBytesAsync($"{filePath}", fileData);
+            await File.WriteAllBytesAsync(filePath, fileData);
+
             //Return new file handle
             return new FileInfo(filePath);
         }
@@ -80,13 +96,7 @@ namespace VNLib.Tools.Build.Executor.Modules
         private string GetProjectTargetDir(IProject project)
         {
             //get last tag
-            return Path.Combine(OutputDir, GetLatestTagOrSha(), project.GetSafeProjectName());
+            return Path.Combine(OutputDir, HeadSha, project.GetSafeProjectName());
         }
-
-        private string GetLatestTagOrSha()
-        {
-            return ModData.Repository.Head.Tip.Sha;
-        }
-
     }
 }

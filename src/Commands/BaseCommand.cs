@@ -2,24 +2,40 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 using Typin;
 using Typin.Console;
 using Typin.Attributes;
+using Typin.Exceptions;
 
-using VNLib.Tools.Build.Executor.Model;
+using Serilog;
+
 using VNLib.Tools.Build.Executor.Constants;
-using static VNLib.Tools.Build.Executor.Constants.Config;
+using VNLib.Tools.Build.Executor.Directories;
 
 namespace VNLib.Tools.Build.Executor.Commands
 {
-    public abstract class BaseCommand(BuildPipeline pipeline, ConfigManager bm) : ICommand
+    public abstract class BaseCommand : ICommand
     {
-        [CommandOption("verbose", 'v', Description = "Prints verbose output")]
-        public bool Verbose { get; set; }
+        [CommandOption("config", Description = "Sets the build configuration file to use")]
+        public string? ConfigFilePath { get; set; }
+
+        [CommandOption("log-dir", Description = "Enables writing a copy of the log output to the desired directory. Should be set if using --silent option")]
+        public string? LogDir { get; set; }
+
+        //Allow users to specify build directory
+        [CommandOption("build-dir", 'B', Description = "Sets the global build directory. Similar to CMake -B")]
+        public string BuildDir { get; set; } = ".build";
+
+        [CommandOption("source", 'S', Description = "Specifies the working directory to run vnbuild in. (Similar to cmake -S option)")]
+        public string WorkingDirectory { get; set; } = ".";
 
         [CommandOption("force", 'f', Description = "Forces the operation even if steps are required")]
         public bool Force { get; set; }
+
+        [CommandOption("confirm", 'c', Description = "Wait for user input before continuing")]
+        public bool Confirm { get; set; }
 
         [CommandOption("include", 'i', Description = "Only use the specified modules, comma separated list")]
         public string? Modules { get; set; }
@@ -27,17 +43,15 @@ namespace VNLib.Tools.Build.Executor.Commands
         [CommandOption("exclude", 'x', Description = "Ignores the specified modules, comma separated list")]
         public string? Exclude { get; set; }
 
-        [CommandOption("confirm", 'c', Description = "Wait for user input before continuing")]
-        public bool Confirm { get; set; }
+        [CommandOption("verbose", 'v', Description = "Prints verbose output")]
+        public bool Verbose { get; set; }
 
-        //Allow users to specify build directory
-        [CommandOption("build-dir", 'B', Description = "Sets the base build directory to execute operations in")]
-        public string BuildDir { get; set; } = Directory.GetCurrentDirectory();
+        [CommandOption("debug", 'd', Description = "Prints debug output")]
+        public bool Debug { get; set; }
 
-        [CommandOption("max-logs", 'L', Description = "Sets the maximum number of logs to keep")]
-        public int MaxLogs { get; set; } = 50;
+        [CommandOption("silent", 's', Description = "Disables console output")]
+        public bool Silent { get; set; }
 
-        public IDirectoryIndex BuildIndex { get; private set; } = default!;
 
         public BuildConfig Config { get; private set; } = default!;
 
@@ -50,20 +64,17 @@ namespace VNLib.Tools.Build.Executor.Commands
         {
             try
             {
+                Config = await ReadConfigOrDefault();
+               
+                BuildPipeline pipeline = new(Config);
+
                 CancellationToken ct = console.GetCancellationToken();
-
-                //Init build index
-                BuildIndex = GetIndex();
-                Config = await bm.GetOrCreateConfig(BuildIndex, false);
-
-                //Cleanup log files on init
-                TrimLogs(BuildIndex, MaxLogs);
 
                 string[] modules = Modules?.Split(',') ?? [];
                 string[] exclude = Exclude?.Split(',') ?? [];
 
                 //Always load the pipeline
-                await pipeline.LoadAsync(Config, modules, exclude, Feeds);
+                await pipeline.LoadAsync(modules, exclude);
 
                 if (Confirm)
                 {
@@ -75,14 +86,11 @@ namespace VNLib.Tools.Build.Executor.Commands
                 }
 
                 //Exec steps then exit
-                await ExecStepsAsync(console);
+                await ExecStepsAsync(console, pipeline);
             }
             catch (OperationCanceledException)
-            {
-                console.WithForegroundColor(
-                    ConsoleColor.Red, 
-                    static o => o.Error.WriteLine("Operation cancelled")
-                );
+            {               
+                throw new CommandException("Operation cancelled", exitCode: 0);
             }
             catch(BuildFailedException be) when (be.InnerException is BuildFailedException bee)
             {
@@ -90,6 +98,8 @@ namespace VNLib.Tools.Build.Executor.Commands
                     ConsoleColor.Red,
                     o => o.Error.WriteLine("FATAL: Build step failed {0}", bee.Message)
                 );
+
+                throw new CommandException(exitCode: 1);
             }
             catch(BuildFailedException be)
             {
@@ -97,33 +107,76 @@ namespace VNLib.Tools.Build.Executor.Commands
                     ConsoleColor.Red, 
                     o => o.Error.WriteLine("FATAL: Build step failed {0}", be.Message)
                 );
+
+                throw new CommandException(exitCode: 1);
             }
         }
 
-        public abstract ValueTask ExecStepsAsync(IConsole console);
-
-        public abstract IFeedManager[] Feeds { get; }
-
-        private Dirs GetIndex() => new()
+        private async Task<BuildConfig> ReadConfigOrDefault()
         {
-            BaseDir = new(BuildDir),
-            BuildDir = BuildDirs.GetOrCreateDir(BUILD_DIR_NAME),
-            LogDir = BuildDirs.GetOrCreateDir(LOG_DIR_NAME),
-            ScratchDir = BuildDirs.GetOrCreateDir(SCRATCH_DIR),
-            SumDir = BuildDirs.GetOrCreateDir(SUM_DIR),
-            OutputDir = BuildDirs.GetOrCreateDir(OUTPUT_DIR)
-        };
+            BuildConfig conf;
+            
+            if(string.IsNullOrWhiteSpace(ConfigFilePath))
+            {
+                conf = new();
+            }
+            else
+            {
+                byte[] configData = await File.ReadAllBytesAsync(ConfigFilePath);
+                conf = JsonSerializer.Deserialize<BuildConfig>(configData) ?? new();
+            }
 
-#nullable disable
-        protected sealed class Dirs : IDirectoryIndex
-        {
-            public DirectoryInfo BaseDir { get; set; }
-            public DirectoryInfo BuildDir { get; set; }
-            public DirectoryInfo LogDir { get; set; }
-            public DirectoryInfo ScratchDir { get; set; }
-            public DirectoryInfo SumDir { get; set; }
-            public DirectoryInfo OutputDir { get; set; }
+            //Override the config with the command line options
+            conf.Force              = this.Force;
+            conf.DryRun             = false;
+            conf.BuildDirectory     = Path.GetFullPath(this.BuildDir);
+            conf.Confirm            = this.Confirm;
+            conf.WorkingDirectory   = Path.GetFullPath(this.WorkingDirectory);
+
+            InitLog(conf);
+
+            return conf;
         }
-#nullable enable
+
+        private void InitLog(BuildConfig config)
+        {
+            GlobalDirIndex dirs = new(config);
+            LoggerConfiguration conf = new();
+
+            if (Verbose)
+            {
+                //Check for verbose logging level
+                conf.MinimumLevel.Verbose();
+            }
+            else if (Debug)
+            {
+                //Check for debug
+                conf.MinimumLevel.Debug();
+            }
+            else
+            {
+                //Default information level
+                conf.MinimumLevel.Information();
+            }
+
+            //Create a console logger unless the silent flag is set
+            if (!Silent)
+            {
+                conf.WriteTo.Console(outputTemplate: config.LogTemplate);
+            }
+
+            //Enable file logging if a log directory is set
+            if (!string.IsNullOrWhiteSpace(LogDir))
+            {
+                string logFilePath = Path.Combine(LogDir, $"vnbuild-{DateTimeOffset.Now.ToUnixTimeSeconds()}-log.txt");
+
+                //Setup the log file output
+                conf.WriteTo.File(logFilePath, outputTemplate: config.LogTemplate);
+            }
+
+            config.Log = conf.CreateLogger();
+        }
+
+        public abstract ValueTask ExecStepsAsync(IConsole console, BuildPipeline pipeline);
     }
 }

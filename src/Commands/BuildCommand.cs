@@ -5,20 +5,17 @@ using System.Threading.Tasks;
 using Typin.Console;
 using Typin.Attributes;
 
-using VNLib.Tools.Build.Executor.Model;
-using VNLib.Tools.Build.Executor.Constants;
-
 namespace VNLib.Tools.Build.Executor.Commands
 {
 
     [Command("build", Description = "Executes a build operation in pipeline")]
-    public class BuildCommand(BuildPipeline pipeline, ConfigManager bm) : BaseCommand(pipeline, bm)
+    public class BuildCommand : BaseCommand
     {
 
-        [CommandOption("no-delay", 'S', Description = "Skips any built-in delay/wait")]
+        [CommandOption("no-delay", Description = "Skips any built-in delay/wait")]
         public bool SkipDelay { get; set; } = false;
 
-        public override async ValueTask ExecStepsAsync(IConsole console)
+        public override async ValueTask ExecStepsAsync(IConsole console, BuildPipeline pipeline)
         {
             CancellationToken cancellation = console.GetCancellationToken();
 
@@ -60,7 +57,5 @@ namespace VNLib.Tools.Build.Executor.Commands
 
             console.WithForegroundColor(ConsoleColor.Green, static o => o.Output.WriteLine("Build completed successfully"));
         }
-
-        public override IFeedManager[] Feeds => [];
     }
 }
