@@ -91,3 +91,41 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
+- name: Publish Images
+  jobExecutor: docker
+  steps:
+  - !CheckoutStep
+    name: code checkout
+    cloneCredential: !DefaultCredential {}
+    withLfs: false
+    withSubmodules: false
+    checkoutPath: '@project_name@'
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: build step
+    runInContainer: true
+    image: www.vaughnnugent.com/vnbuild/vnbuild:latest-ubuntu
+    interpreter: !DefaultInterpreter
+      commands: |
+        vnbuild build --no-delay
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !BuildImageStep
+    name: build fedora image
+    buildPath: '@project_name@/contianers/images/fedora-amd64'
+    output: !RegistryOutput
+      tags: www.vaughnnugent.com/vnbuild/vnbuild:latest-fedora www.vaughnnugent.com/vnbuild/vnbuild:@commit_hash@-fedora docker.io/vnuge/vnbuild:latest-fedora docker.io/vnuge/vnbuild:@commit_hash@-fedora
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !BuildImageStep
+    name: build ubuntu image
+    buildPath: '@project_name@/contianers/images/ubuntu-amd64'
+    output: !RegistryOutput
+      tags: www.vaughnnugent.com/vnbuild/vnbuild:latest-ubuntu www.vaughnnugent.com/vnbuild/vnbuild:@commit_hash@-ubuntu docker.io/vnuge/vnbuild:latest-ubuntu docker.io/vnuge/vnbuild:@commit_hash@-ubuntu
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !BranchUpdateTrigger
+    branches: master
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400

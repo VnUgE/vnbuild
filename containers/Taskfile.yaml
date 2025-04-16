@@ -11,6 +11,7 @@ vars:
   BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
   BUILD_DIR: build
   VNBUILD_DIR: '{{ .USER_WORKING_DIR }}/vnbuild'
+  IMAGE_BUILD_DIR: images
 
   BASE_IMAGES: ["ubuntu-amd64", "fedora-amd64"]
 
@@ -42,12 +43,25 @@ tasks:
      - for: { var: BASE_IMAGES }
        cmd: cd "{{ .BUILD_DIR }}/{{ .ITEM }}" &&
          tar -czf "{{ .BINARY_DIR }}/{{ .ITEM }}.tgz" .
+
+     - task: prep-images
      
      - cmd: powershell rm -Recurse -Force "{{ .BUILD_DIR }}"
        ignore_error: true
      - cmd: powershell rm -Recurse -Force "{{ .VNBUILD_DIR }}"
        ignore_error: true
 
+  prep-images:
+    cmds:
+     - for: { var: BASE_IMAGES }
+       cmd: powershell mkdir -f "{{ .IMAGE_BUILD_DIR }}/{{ .ITEM }}"
+      
+     - for: { var: BASE_IMAGES }
+       cmd: powershell 
+          cp "{{ .BINARY_DIR }}/{{ .ITEM }}.tgz" "{{ .IMAGE_BUILD_DIR }}/{{ .ITEM }}" && 
+          cd "{{ .IMAGE_BUILD_DIR }}/{{ .ITEM }}" &&
+          tar -xzf "{{ .ITEM }}.tgz" &&
+          powershell rm -Force "{{ .ITEM }}.tgz"
 
   build-vnbuild:
     cmds:
@@ -60,6 +74,6 @@ tasks:
 
   clean:
     cmds:
-     - for: [ vnbuild/, build/, bin/ ]
+     - for: [ vnbuild/, build/, bin/, images/ ]
        cmd: powershell rm -Recurse -Force "{{ .ITEM }}"
        ignore_error: true
