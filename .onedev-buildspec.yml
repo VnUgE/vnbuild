@@ -104,7 +104,7 @@ jobs:
   - !CommandStep
     name: build step
     runInContainer: true
-    image: www.vaughnnugent.com/vnbuild/vnbuild:latest-ubuntu
+    image: vnbuild-ubuntu:latest
     interpreter: !DefaultInterpreter
       commands: |
         vnbuild build --no-delay
