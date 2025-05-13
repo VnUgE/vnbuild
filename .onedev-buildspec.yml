@@ -112,15 +112,15 @@ jobs:
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !BuildImageStep
     name: build fedora image
-    buildPath: '@project_name@/contianers/images/fedora-amd64'
+    buildPath: '@project_name@/containers/images/fedora-amd64'
     output: !RegistryOutput
-      tags: www.vaughnnugent.com/vnbuild/vnbuild:latest-fedora www.vaughnnugent.com/vnbuild/vnbuild:@commit_hash@-fedora docker.io/vnuge/vnbuild:latest-fedora docker.io/vnuge/vnbuild:@commit_hash@-fedora
+      tags: vnuge/vnbuild:latest-fedora vnuge/vnbuild:@commit_hash@-fedora
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !BuildImageStep
     name: build ubuntu image
-    buildPath: '@project_name@/contianers/images/ubuntu-amd64'
+    buildPath: '@project_name@/containers/images/ubuntu-amd64'
     output: !RegistryOutput
-      tags: www.vaughnnugent.com/vnbuild/vnbuild:latest-ubuntu www.vaughnnugent.com/vnbuild/vnbuild:@commit_hash@-ubuntu docker.io/vnuge/vnbuild:latest-ubuntu docker.io/vnuge/vnbuild:@commit_hash@-ubuntu
+      tags: vnuge/vnbuild:latest-ubuntu vnuge/vnbuild:@commit_hash@-ubuntu
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
   - !BranchUpdateTrigger
