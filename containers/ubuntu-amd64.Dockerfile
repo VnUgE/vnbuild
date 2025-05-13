@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:25.04
 
 RUN apt update &&   \
     apt install -y  \
@@ -9,8 +9,8 @@ RUN apt update &&   \
     dotnet-sdk-8.0
 
 # Ensure 'go-task' is globally accessible as 'task'
-ADD --checksum=sha256:bb660b4197bc6e5728e32d50a6eeea0c1fb095e5574dd4e7212c0ff0503ff81c \
-    https://github.com/go-task/task/releases/download/v3.42.1/task_linux_amd64.deb \
+ADD --checksum=sha256:717cc03e60bf92fa53015a15b263c750f2452ba17f8f7b7648b2afc19ac4e969 \
+    https://github.com/go-task/task/releases/download/v3.43.3/task_linux_amd64.deb \
     task_linux.deb
 
 #install the task package
