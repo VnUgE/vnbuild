@@ -12,8 +12,8 @@ RUN dnf install -y  \
     && dnf clean all
 
 # Ensure 'go-task' is globally accessible as 'task'
-ADD --checksum=sha256:d02d4657de0d5454a61bd433c52a9b23b42419bc5dd1da4aaadd0951b57b2cd2 \
-    https://github.com/go-task/task/releases/download/v3.42.1/task_linux_amd64.rpm \
+ADD --checksum=sha256:6086e8a1feca2c6a1fdd5042f7752cc41ed5d72bf023456d9fc63cb1bff4fefc \
+    https://github.com/go-task/task/releases/download/v3.43.3/task_linux_amd64.rpm \
     task_linux.rpm
 
 #install the task package

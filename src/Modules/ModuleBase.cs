@@ -46,7 +46,7 @@ namespace VNLib.Tools.Build.Executor.Modules
 
         /// <inheritdoc/>
         public string GetVersionString() 
-            => _version?.LegacySemVerPadded ?? throw new InvalidOperationException("Version not loaded");
+            => _version?.SemVer ?? throw new InvalidOperationException("Version not loaded");
 
         /// <summary>
         /// The git repository of the module
@@ -58,8 +58,8 @@ namespace VNLib.Tools.Build.Executor.Modules
             TaskVars.Set("SAFE_BRANCH_NAME", version.EscapedBranchName);
             TaskVars.Set("BRANCH_NAME", version.BranchName);
             TaskVars.Set("HEAD_SHA", version.Sha);
-            TaskVars.Set("BUILD_VERSION", version.LegacySemVerPadded);
-            TaskVars.Set("VERSION", version.LegacySemVerPadded);
+            TaskVars.Set("BUILD_VERSION", version.SemVer);
+            TaskVars.Set("VERSION", version.SemVer);
             TaskVars.Set("SEMVER", version.FullSemVer);
             TaskVars.Set("ASSEMBLY_SEMVER", version.AssemblySemVer);
             TaskVars.Set("VERSION_MAJOR", version.Major.ToString());
@@ -123,7 +123,7 @@ namespace VNLib.Tools.Build.Executor.Modules
             await Projects.RunAllAsync(p => p.LoadAsync(TaskVars.Clone()));
 
             build.Log.Information("Sucessfully loaded {count} projects into module {sln}", Projects.Count, ModuleName);
-            build.Log.Information("{modname} CI build SemVer will be {semver}", ModuleName, _version.LegacySemVerPadded);
+            build.Log.Information("{modname} CI build SemVer will be {semver}", ModuleName, _version.SemVer);
         }
 
         ///<inheritdoc/>
@@ -148,7 +148,7 @@ namespace VNLib.Tools.Build.Executor.Modules
             }
             else
             {
-                build.Log.Information("{modname} CI build SemVer will now be {semver}", ModuleName, _version.LegacySemVerPadded);
+                build.Log.Information("{modname} CI build SemVer will now be {semver}", ModuleName, _version.SemVer);
             }
         }
 
