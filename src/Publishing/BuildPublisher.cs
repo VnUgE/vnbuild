@@ -303,7 +303,7 @@ namespace VNLib.Tools.Build.Executor.Publishing
             writer.WriteString("version", mod.GetVersionString());
             writer.WriteString("semver", mod.GetVersionString());
 
-            writer.WriteString("branch", mod.Repository.Head.TrackedBranch.FriendlyName);
+            writer.WriteString("branch", mod.Repository.Head.FriendlyName);
             writer.WriteString("author_name", mod.Repository.Head.Tip.Author.Name);
             writer.WriteString("author_email", mod.Repository.Head.Tip.Author.Email);
             writer.WriteString("commit_date", mod.Repository.Head.Tip.Author.When);
