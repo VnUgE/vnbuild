@@ -38,12 +38,17 @@ jobs:
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
-    name: VNBuild publish
+    name: mock publish
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
         vnbuild publish --verbose
     useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !PublishArtifactStep
+    name: publish image artifacts
+    sourcePath: '@project_name@/containers/bin'
+    artifacts: '*'
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
   - !BranchUpdateTrigger
@@ -51,8 +56,8 @@ jobs:
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
-  timeout: 3600
-- name: Build and publish
+  timeout: 14400
+- name: Publish master
   jobExecutor: publish-agents
   steps:
   - !CommandStep
@@ -84,47 +89,54 @@ jobs:
       value: '@secret:ftp_password@'
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !PublishArtifactStep
+    name: publish server artifacts
+    sourcePath: '@project_name@/containers/bin'
+    artifacts: '*'
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
   - !BranchUpdateTrigger
     branches: master
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
-  timeout: 3600
+  timeout: 14400
 - name: Publish Images
   jobExecutor: docker
   steps:
-  - !CheckoutStep
-    name: code checkout
-    cloneCredential: !DefaultCredential {}
-    withLfs: false
-    withSubmodules: false
-    checkoutPath: '@project_name@'
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
-    name: build step
+    name: prep image
     runInContainer: true
-    image: vnuge/vnbuild:ubuntu-latest
+    image: ubuntu:25.04
     interpreter: !DefaultInterpreter
       commands: |
-        vnbuild build --no-delay
+        cd @project_name@
+        ls -lah
+        mkdir fedora ubuntu
+        tar -xzf fedora-amd64.tgz -C fedora
+        tar -xzf ubuntu-amd64.tgz -C ubuntu
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !BuildImageStep
     name: build fedora image
-    buildPath: '@project_name@/containers/images/fedora-amd64'
+    buildPath: '@project_name@/fedora'
     output: !RegistryOutput
-      tags: vnuge/vnbuild:latest-fedora vnuge/vnbuild:@commit_hash@-fedora
+      tags: vnuge/vnbuild:fedora-latest vnuge/vnbuild:fedora-@commit_hash@
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !BuildImageStep
     name: build ubuntu image
-    buildPath: '@project_name@/containers/images/ubuntu-amd64'
+    buildPath: '@project_name@/ubuntu'
     output: !RegistryOutput
-      tags: vnuge/vnbuild:latest-ubuntu vnuge/vnbuild:@commit_hash@-ubuntu
+      tags: vnuge/vnbuild:ubuntu-latest vnuge/vnbuild:ubuntu-@commit_hash@
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
   - !BranchUpdateTrigger
-    branches: master
+    branches: -master
+  jobDependencies:
+  - jobName: Mock Build
+    requireSuccessful: true
+    artifacts: '**'
+    destinationPath: '@project_name@'
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
