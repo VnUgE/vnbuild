@@ -29,7 +29,7 @@ namespace VNLib.Tools.Build.Executor.Projects
 
         public string[] GetProjectRefs()
         {
-            return Array.Empty<string>();
+            return [];
         }
 
         public void Load(Stream stream)
