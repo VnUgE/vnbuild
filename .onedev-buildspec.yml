@@ -10,6 +10,14 @@ jobs:
     force: false
     condition: SUCCESSFUL
     optional: false
+  - !PushRepository
+    name: Codeberg push sync
+    remoteUrl: https://codeberg.org/VnUgE/vnbuild.git
+    userName: VnUgE
+    passwordSecret: codeberg-access-token
+    force: true
+    condition: SUCCESSFUL
+    optional: false
   triggers:
   - !TagCreateTrigger {}
   - !BranchUpdateTrigger {}
