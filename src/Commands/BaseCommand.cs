@@ -24,6 +24,9 @@ namespace VNLib.Tools.Build.Executor.Commands
         [CommandOption("log-dir", Description = "Enables writing a copy of the log output to the desired directory. Should be set if using --silent option")]
         public string? LogDir { get; set; }
 
+        [CommandOption("task-verbose", Description = "Enables verbose go-task output")]
+        public bool TaskVerbose { get; set; } = false;
+
         //Allow users to specify build directory
         [CommandOption("build-dir", 'B', Description = "Sets the global build directory. Similar to CMake -B")]
         public string BuildDir { get; set; } = ".build";
@@ -51,7 +54,7 @@ namespace VNLib.Tools.Build.Executor.Commands
 
         [CommandOption("silent", 's', Description = "Disables console output")]
         public bool Silent { get; set; }
-
+       
 
         public BuildConfig Config { get; private set; } = default!;
 
@@ -127,11 +130,12 @@ namespace VNLib.Tools.Build.Executor.Commands
             }
 
             //Override the config with the command line options
-            conf.Force              = this.Force;
+            conf.Force              = Force;
             conf.DryRun             = false;
-            conf.BuildDirectory     = Path.GetFullPath(this.BuildDir);
-            conf.Confirm            = this.Confirm;
-            conf.WorkingDirectory   = Path.GetFullPath(this.WorkingDirectory);
+            conf.BuildDirectory     = Path.GetFullPath(BuildDir);
+            conf.Confirm            = Confirm;
+            conf.WorkingDirectory   = Path.GetFullPath(WorkingDirectory);
+            conf.TaskVerbose        = TaskVerbose;
 
             InitLog(conf);
 
