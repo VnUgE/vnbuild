@@ -1,4 +1,4 @@
-version: 37
+version: 40
 jobs:
 - name: Push to GitHub
   steps:
@@ -8,12 +8,19 @@ jobs:
     userName: VnUgE
     passwordSecret: git-access-token
     force: false
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
+  - !PushRepository
+    name: Codeberg push sync
+    remoteUrl: https://codeberg.org/VnUgE/vnbuild.git
+    userName: VnUgE
+    passwordSecret: codeberg-access-token
+    force: true
+    condition: SUCCESSFUL
+    optional: false
   triggers:
-  - !TagCreateTrigger
-    projects: vnbuild
-  - !BranchUpdateTrigger
-    projects: vnbuild
+  - !TagCreateTrigger {}
+  - !BranchUpdateTrigger {}
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -26,9 +33,10 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        git clone @server_url@/@project_name@ --branch @branch@
+        git clone @server_url@/@project_path@ --branch @branch@
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild build
     runInContainer: false
@@ -36,7 +44,8 @@ jobs:
       commands: |
         vnbuild build --verbose --no-delay
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild publish
     runInContainer: false
@@ -44,7 +53,8 @@ jobs:
       commands: |
         vnbuild publish --verbose
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   triggers:
   - !BranchUpdateTrigger
     branches: -master
@@ -60,9 +70,10 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        git clone @server_url@/@project_name@ --branch @branch@
+        git clone @server_url@/@project_path@ --branch @branch@
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild build
     runInContainer: false
@@ -70,7 +81,8 @@ jobs:
       commands: |
         vnbuild build --no-delay
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild publish
     runInContainer: false
@@ -83,7 +95,8 @@ jobs:
     - name: FTP_PASSWORD
       value: '@secret:ftp_password@'
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   triggers:
   - !BranchUpdateTrigger
     branches: master
