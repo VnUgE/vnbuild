@@ -43,7 +43,7 @@ tasks:
         /p:UseCommonOutputDirectory=true 
         /p:IntermediateOutputPath="{{ .INT_DIR }}"'
     cmds:
-    - cmd: dotnet-gitversion.exe /updateprojectfiles
+    - cmd: dotnet gitversion /updateprojectfiles
     
     #build release mode after all debug builds
     - for: { var: TARGET_ARCHES }
@@ -63,3 +63,13 @@ tasks:
     - cmd: dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
     - cmd: powershell rm -Force {{ .ARCHIVE_FILE_NAME }}
       ignore_error: true
+
+
+  write-changelog:
+    cmds:
+     - cmd: git-cliff
+         --verbose
+         --config ci/cliff.toml
+         --output 'CHANGELOG.md'
+         --tag v{{ .VERSION }}
+         {{ .CLI_ARGS }}
