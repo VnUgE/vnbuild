@@ -19,6 +19,12 @@ namespace VNLib.Tools.Build.Executor.Constants
         [JsonIgnore]
         public bool Confirm { get; set; }
 
+        /// <summary>
+        /// A flag indicates whether to enable go-task's verbose output.
+        /// </summary>
+        [JsonIgnore]
+        public bool TaskVerbose { get; set; } = false;
+
         [JsonIgnore]
         public string WorkingDirectory { get; set; } = Directory.GetCurrentDirectory();
 

@@ -62,6 +62,11 @@ namespace VNLib.Tools.Build.Executor
                 args.Add("--force");
             }
 
+            if (build.TaskVerbose)
+            {
+                args.Add("--verbose");
+            }
+
             string logName;
 
             if (scope is IProject proj)
@@ -119,8 +124,8 @@ namespace VNLib.Tools.Build.Executor
                     return;
                 case 201:
                     ThrowIfStepFailed(
-                        status: false, 
-                        message: $"Task failed to execute task command {cmd} for {scope.WorkingDir.Name}", 
+                        status: false,
+                        message: $"Task failed to execute task command {cmd} for {scope.WorkingDir.Name}",
                         mod.ModuleName
                     );
                     return;
