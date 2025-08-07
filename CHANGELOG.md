@@ -7,9 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.1] - 2025-08-07
 
+### Added
+
+- Add changelog using git-cliff - (changelog)
+- Add --task-verbose flag to base command - (flag)
+
+### Changed
+
+- Update nuget dependencies - (deps)
+
 ### Fixed
 
 - **Breaking Change:** Switch from legacy semver to standard semver versioning 
+
+### Removed
+
+- Remove dotnet-gitversion.exe windows-specific execuable from build command, switch to agnostic dotnet gitversion 
 
 ## [1.0.0] - 2025-04-06
 
