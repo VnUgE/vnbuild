@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
 		.onedev-buildspec.yml = .onedev-buildspec.yml
+		CHANGELOG.md = CHANGELOG.md
 		GitVersion.yml = GitVersion.yml
 		Module.Taskfile.yaml = Module.Taskfile.yaml
 		Taskfile.yaml = Taskfile.yaml
@@ -21,6 +22,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "containers", "containers", 
 		containers\package.json = containers\package.json
 		containers\Taskfile.yaml = containers\Taskfile.yaml
 		containers\ubuntu-amd64.Dockerfile = containers\ubuntu-amd64.Dockerfile
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ci", "ci", "{6AABB99C-1ABB-4EEA-98AB-659F25F42121}"
+	ProjectSection(SolutionItems) = preProject
+		ci\cliff.toml = ci\cliff.toml
 	EndProjectSection
 EndProject
 Global
