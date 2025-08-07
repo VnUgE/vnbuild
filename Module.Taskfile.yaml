@@ -43,7 +43,7 @@ tasks:
         /p:UseCommonOutputDirectory=true 
         /p:IntermediateOutputPath="{{ .INT_DIR }}"'
     cmds:
-    - cmd: dotnet-gitversion.exe /updateprojectfiles
+    - cmd: dotnet gitversion /updateprojectfiles
     
     #build release mode after all debug builds
     - for: { var: TARGET_ARCHES }
