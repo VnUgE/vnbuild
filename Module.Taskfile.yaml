@@ -63,3 +63,13 @@ tasks:
     - cmd: dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
     - cmd: powershell rm -Force {{ .ARCHIVE_FILE_NAME }}
       ignore_error: true
+
+
+  write-changelog:
+    cmds:
+     - cmd: git-cliff
+         --verbose
+         --config ci/cliff.toml
+         --output 'CHANGELOG.md'
+         --tag v{{ .VERSION }}
+         {{ .CLI_ARGS }}
