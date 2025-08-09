@@ -57,6 +57,7 @@ namespace VNLib.Tools.Build.Executor.Extensions
         public static string GetOutputFileTypes(this IProject project, string defaultType)
         {
             string? artifactTypes = project.ProjectData["file_extension"]
+                ?? project.ProjectData["ArtifactFileType"]
                 ?? project.ProjectData["output_file_type"]
                 ?? project.ProjectData["output_type"]
                 ?? project.ProjectData["artifact_type"];
