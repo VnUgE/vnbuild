@@ -59,7 +59,7 @@ namespace VNLib.Tools.Build.Executor.Constants
         /// The output file type to use when searching for output files
         /// </summary>
         [JsonPropertyName("output_file_type")]
-        public string OutputFileType { get; init; } = "*.tgz";
+        public string FallbackOutputFileType { get; init; } = "*.tgz";
 
         /// <summary>
         /// The default archive format to use when creating source archives
