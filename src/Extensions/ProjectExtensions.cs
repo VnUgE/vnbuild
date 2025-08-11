@@ -49,6 +49,26 @@ namespace VNLib.Tools.Build.Executor.Extensions
         }
 
         /// <summary>
+        /// Gets the output file types for the project, or defaults to desired type
+        /// </summary>
+        /// <param name="project"></param>
+        /// <param name="defaultType">The default file type to fallback to</param>
+        /// <returns>The desired project output artifact file type to search for</returns>
+        public static string GetOutputFileTypes(this IProject project, string defaultType)
+        {
+            string? artifactTypes = project.ProjectData["file_extension"]
+                ?? project.ProjectData["ArtifactFileType"]
+                ?? project.ProjectData["output_file_type"]
+                ?? project.ProjectData["output_type"]
+                ?? project.ProjectData["artifact_type"];
+
+            //If no output file types are specified, default to the module config
+            return string.IsNullOrWhiteSpace(artifactTypes) 
+                ? defaultType 
+                : artifactTypes;
+        }
+
+        /// <summary>
         /// Gets the project dependencies for the given project
         /// </summary>
         /// <param name="project"></param>
@@ -94,8 +114,11 @@ namespace VNLib.Tools.Build.Executor.Extensions
             //realtive file path
             outDir = Path.Combine(project.WorkingDir.FullName, outDir);
 
+            //Get the output file types for the project
+            string searchType = project.GetOutputFileTypes(mod.FallbackOutputFileType);
+
             return new DirectoryInfo(outDir)
-                    .EnumerateFiles(mod.OutputFileType, SearchOption.TopDirectoryOnly);
+                    .EnumerateFiles(searchType, SearchOption.TopDirectoryOnly);
         }
 
         /// <summary>
