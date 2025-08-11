@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <AssemblyName>vnbuild</AssemblyName>
     <RootNamespace>VNLib.Tools.Build.Executor</RootNamespace>
+    <RuntimeIdentifiers>linux-x64;win-x64;osx-x64;win-arm64;linux-arm;linux-arm64;osx-arm64</RuntimeIdentifiers>
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <PropertyGroup>
