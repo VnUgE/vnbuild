@@ -17,7 +17,6 @@ namespace VNLib.Tools.Build.Executor
                  .AddCommandsFromThisAssembly()
                  .UseConsole<SystemConsole>()
                  .UseTitle("VNBuild Copyright (c) Vaughn Nugent")
-                 .UseStartupMessage("VNBuild Copyright (c) Vaughn Nugent")
                  .UseVersionText(version)
                  .Build()
                  .RunAsync()
