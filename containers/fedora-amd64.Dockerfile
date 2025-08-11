@@ -1,13 +1,7 @@
 FROM fedora:42
 
 # Combine package installation and cleanup in single layer
-RUN dnf group install -y \
-    c-development \
-    development-tools \
-    && dnf install -y \
-    cmake \
-    curl \
-    git \
+RUN dnf install -y \
     dotnet-sdk-8.0 \
     && dnf clean all \
     && dnf autoremove -y

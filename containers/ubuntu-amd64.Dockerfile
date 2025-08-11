@@ -1,11 +1,6 @@
 FROM ubuntu:24.04
 
-RUN apt update && \
-    apt install -y \
-    cmake \
-    curl \
-    git \
-    build-essential \
+RUN apt update && apt install -y \
     dotnet-sdk-8.0 \
     && rm -rf /var/lib/apt/lists/* \
     && apt autoremove -y \
