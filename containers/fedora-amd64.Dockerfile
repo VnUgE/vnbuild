@@ -1,20 +1,14 @@
 FROM fedora:42
 
 # Combine package installation and cleanup in single layer
-RUN dnf group install -y \
-    c-development \
-    development-tools \
-    && dnf install -y \
-    cmake \
-    curl \
-    git \
+RUN dnf install -y \
     dotnet-sdk-8.0 \
     && dnf clean all \
     && dnf autoremove -y
 
 # Install task and clean up in same layer
-ADD --checksum=sha256:9c4b02c1923d9392250547cb1e9ed3a5ff862381083612196985192e7b34ad84 \
-    https://github.com/go-task/task/releases/download/v3.44.0/task_linux_amd64.rpm \
+ADD --checksum=sha256:badf7f400868abbab82af432a338e3e241725cdde79d67938a45163d2c520edf \
+    https://github.com/go-task/task/releases/download/v3.44.1/task_linux_amd64.rpm \
     task_linux_amd64.rpm
 
 RUN rpm -Uvh task_linux_amd64.rpm && \

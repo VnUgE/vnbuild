@@ -276,12 +276,12 @@ namespace VNLib.Tools.Build.Executor.Publishing
                 config.Log.Information("GPG Siginig is enabled, signing all artifacts for module {mod}", mod.Config.ModuleName);
 
                 /*
-                 * Get all of the artifacts from the module's projects that match the target output 
-                 * file type, and sign them
+                 * Get all of the artifacts from the module's projects that aren't automatically 
+                 * generated hash files (we don't sign the hash files) Also consitant with the package
+                 * generation step
                  */
                 IEnumerable<FileInfo> artifacts = mod.Projects.SelectMany(
-                    p => mod.FileManager.GetArtifactOutputDir(p)
-                    .EnumerateFiles(mod.Config.OutputFileType, SearchOption.TopDirectoryOnly)
+                    p => GetProjOutputFiles(mod.FileManager, p)
                 );
 
                 //Sign synchronously

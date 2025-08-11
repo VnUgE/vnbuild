@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <AssemblyName>vnbuild</AssemblyName>
     <RootNamespace>VNLib.Tools.Build.Executor</RootNamespace>
+    <RuntimeIdentifiers>linux-x64;win-x64;osx-x64;win-arm64;linux-arm;linux-arm64;osx-arm64</RuntimeIdentifiers>
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -18,7 +22,8 @@
     <RepositoryUrl>https://github.com/VnUgE/vnbuild/</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <Artifacts>linux-x64-release.tgz,linux-arm-release.tgz,linux-arm64-release.tgz,win-x64-release.tgz,win-arm64-release.tgz,osx-x64-release.tgz,osx-arm64-release.tgz</Artifacts>
+    <Artifacts>linux-x64.tgz,linux-arm.tgz,linux-arm64.tgz,win-x64.tgz,win-arm64.tgz,osx-x64.tgz,osx-arm64.tgz</Artifacts>
+    <ArtifactFileType>*.*</ArtifactFileType>
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,49 +2,29 @@
 
 version: '3'
 
-includes:
-  module: 
-    taskfile: './Module.Taskfile.yaml'
-    internal: true
+vars:
+  BINARY_DIR: '{{ .BINDARY_DIR | default "bin" }}'
+
+  LINUX_ARCHES: [ "linux-x64", "linux-arm", "linux-arm64" ]
 
 tasks:
-  #when build succeeds, archive the output into a tgz 
+
+  build:
+    desc: "DO NOT USE! Used by vnbuild CI to build the module."
+    dir: '{{ .USER_WORKING_DIR }}'
+    cmds:
+      - for: { var: LINUX_ARCHES }
+        cmd: dotnet deb -c release -r {{ .ITEM }} --output {{ .BINARY_DIR }}
+
+      - for: { var: LINUX_ARCHES }
+        cmd: dotnet rpm -c release -r {{ .ITEM }} --output {{ .BINARY_DIR }}
+
+  #when build succeeds, archive the output into a tgz
   postbuild_success:
     dir: '{{ .USER_WORKING_DIR }}'
-    vars:
-      RELEASE_DIR: "./bin/release/{{ .TARGET_FRAMEWORK }}"  
     cmds:
       #pack up source code and put in output
      - task: pack_source
-
-      #remove unnecessary files from the release dir
-     - cmd: powershell -Command "
-        Get-ChildItem 
-        -Recurse 
-        -Include *.pdb,*.xml 
-        '{{ .RELEASE_DIR }}/' 
-        | Remove-Item"
-
-     - task: postbuild_parallel
-
-  postbuild_parallel:
-    deps:
-     - for: { var: TARGET_ARCHES }
-       task: postbuild
-       vars: { BUILD_MODE: release, TARGET_OS: '{{ .ITEM }}' }
-
-  postbuild:
-    internal: true
-    dir: '{{ .USER_WORKING_DIR }}'
-    vars:
-      BUILD_DIR: "{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/{{ .BUILD_MODE }}/{{ .TARGET_FRAMEWORK }}/{{ .TARGET_OS }}/publish"
-      TARGET_DIR: "{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}"
-    cmds:
-     #copy and readme to target
-     - cmd: cd .. && powershell cp './build.readme.txt' '{{ .BUILD_DIR }}/readme.txt'
-       ignore_error: true
-
-     - cmd: cd "{{ .BUILD_DIR }}" && tar -czf "{{ .TARGET_DIR }}/{{ .TARGET_OS }}-{{ .BUILD_MODE }}.tgz" .
 
   pack_source:
     internal: true
@@ -53,7 +33,6 @@ tasks:
       EXCLUDES:
         --exclude='src/bin/*'
         --exclude='src/obj/*'
-        #--exclude='.tarignore'
       INCLUDES:
         src/*
         LICENSE
