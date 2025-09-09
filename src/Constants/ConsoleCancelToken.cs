@@ -5,15 +5,11 @@ namespace VNLib.Tools.Build.Executor.Constants
 {
     internal sealed class ConsoleCancelToken : IDisposable
     {
-        private readonly CancellationTokenSource _cts;
+        private readonly CancellationTokenSource _cts = new();
 
         public CancellationToken Token => _cts.Token;
 
-        public ConsoleCancelToken(CancellationToken existingToken)
-        {
-            Console.CancelKeyPress += OnCancel;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(existingToken);
-        }
+        public ConsoleCancelToken() => Console.CancelKeyPress += OnCancel;
 
         private void OnCancel(object? sender, ConsoleCancelEventArgs e)
         {
