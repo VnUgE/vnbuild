@@ -21,11 +21,12 @@ namespace VNLib.Tools.Build.Executor.Constants
             string logName,
             DirectoryInfo? workingDir,
             string[] args,
-            IReadOnlyDictionary<string, string>? env = null
+            IReadOnlyDictionary<string, string>? env = null,
+            CancellationToken cancellation = default
         )
         {
             //Init new console cancellation token
-            using ConsoleCancelToken ctToken = new();
+            using ConsoleCancelToken ctToken = new(cancellation);
 
             ProcessStartInfo psi = new(process)
             {
