@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -17,8 +18,22 @@ namespace VNLib.Tools.Build.Executor
         Update,
         PostbuildSuccess,
         PostbuildFailure,
+
+        /// <summary>
+        /// Runs in every runable location during a publish step for the project/module 
+        /// to run publish tasks or pre-publish tasks
+        /// </summary>
         Publish,
+
+        /// <summary>
+        /// A short running task that runs tests for a project or module
+        /// </summary>
         Test,
+
+        /// <summary>
+        /// A long running task that starts before tests and ends after tests
+        /// </summary>
+        TestUp
     }
 
     /// <summary>
@@ -33,9 +48,14 @@ namespace VNLib.Tools.Build.Executor
         /// the configured manager.
         /// </summary>
         /// <param name="command">The command to execute</param>
-        /// <param name="userArgs">Additional user arguments to pass to Task </param>
+        /// <param name="scope">Additional information used to execute task and the desired command</param>
         /// <returns>A task that completes with the status code of the operation</returns>
-        public async Task ExecCommandAsync(ITaskfileScope scope, TaskfileComamnd command, bool throwIfFailed)
+        public async Task ExecCommandAsync(
+            ITaskfileScope scope, 
+            TaskfileComamnd command, 
+            bool throwIfFailed, 
+            CancellationToken token = default
+        )
         {
             //Specify taskfile if it is set
             List<string> args = [];
@@ -112,6 +132,7 @@ namespace VNLib.Tools.Build.Executor
                 TaskfileComamnd.PostbuildFailure    => "postbuild_failed",
                 TaskfileComamnd.Publish             => "publish",
                 TaskfileComamnd.Test                => "test",
+                TaskfileComamnd.TestUp              => "test-up",
                 _ => throw new NotImplementedException()
             };
         }
