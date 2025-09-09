@@ -44,6 +44,22 @@ namespace VNLib.Tools.Build.Executor
         private readonly ProcessRunner _runner = new(build);
 
         /// <summary>
+        /// Executes the desired Taskfile command in the background with the ability
+        /// to cancel the operation
+        /// </summary>
+        /// <param name="scope"></param>
+        /// <param name="command"></param>
+        /// <param name="throwIfFailed"></param>
+        /// <returns></returns>
+        public BackgroundTask ExecCommandBackground(ITaskfileScope scope, TaskfileComamnd command,bool throwIfFailed)
+        {
+            CancellationTokenSource cts = new();
+            Task job = ExecCommandAsync(scope, command, throwIfFailed, cts.Token);
+
+            return new BackgroundTask(job, cts);
+        }
+
+        /// <summary>
         /// Executes the desired Taskfile command with the given user args for 
         /// the configured manager.
         /// </summary>
@@ -111,7 +127,8 @@ namespace VNLib.Tools.Build.Executor
                 logName,
                 scope.WorkingDir,
                 args: [.. args],
-                env: scope.TaskVars.GetVariables()
+                env: scope.TaskVars.GetVariables(),
+                cancellation: token
             );
 
             if (throwIfFailed)
