@@ -7,8 +7,8 @@ RUN dnf install -y \
     && dnf autoremove -y
 
 # Install task and clean up in same layer
-ADD --checksum=sha256:badf7f400868abbab82af432a338e3e241725cdde79d67938a45163d2c520edf \
-    https://github.com/go-task/task/releases/download/v3.44.1/task_linux_amd64.rpm \
+ADD --checksum=sha256:7981839f1932ab9de743b0cb46513d9127139d65c9f1ed92ffc6f97cc7b1fe07 \
+    https://github.com/go-task/task/releases/download/v3.45.4/task_linux_amd64.rpm \
     task_linux_amd64.rpm
 
 RUN rpm -Uvh task_linux_amd64.rpm && \
