@@ -25,6 +25,7 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
+
 - name: Mock Build
   jobExecutor: windows
   steps:
@@ -62,6 +63,7 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
+
 - name: Build and publish
   jobExecutor: publish-agents
   steps:

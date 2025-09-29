@@ -4,10 +4,6 @@ version: '3'
 
 vars:
   MODULE_NAME: '{{ .MODULE_NAME | default "vnbuild" }}'
-  MS_ARGS: 
-    /p:RunAnalyzersDuringBuild=false
-    /p:BuildInParallel=true 
-    /p:MultiProcessorCompilation=true 
 
   TARGET_ARCHES: [ "linux-x64", "win-x64", "osx-x64", "win-arm64", "linux-arm", "linux-arm64", "osx-arm64" ]
 
@@ -18,7 +14,7 @@ tasks:
     vars:
       CONFIGURATION: '{{ .CONFIGURATION | default "release" }}'
     cmds:
-     - cmd: cd src/ && dotnet build -c {{ .CONFIGURATION }} {{ .MS_ARGS }} {{ .CLI_ARGS }}
+     - cmd: cd src/ && dotnet build -c {{ .CONFIGURATION }} {{ .CLI_ARGS }}
 
   #called by build pipeline to sync repo
   update:
@@ -40,8 +36,7 @@ tasks:
       task: build-config
       vars: 
         RUNTIME_ID: '{{ .ITEM }}'
-        BUILD_FLAGS: '{{ .BUILD_FLAGS }}'
-        MS_ARGS: '{{ .MS_ARGS }}' 
+        BUILD_FLAGS: '{{ .BUILD_FLAGS }}'       
         OUT_DIR: '{{ .SCRATCH_DIR }}/build/{{ .ITEM }}'
 
   build-config:
@@ -61,7 +56,6 @@ tasks:
         /p:UseCommonOutputDirectory=true 
         /p:IntermediateOutputPath="{{ .INT_DIR }}"
         {{ .BUILD_FLAGS }}
-        {{ .MS_ARGS }}
   
   postbuild_success:
     desc: 'DO NOT USE! Used by vnbuild CI to run post build tasks.'
