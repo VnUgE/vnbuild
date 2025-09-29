@@ -73,6 +73,9 @@ A typical vnbuild pipeline consists of the following stages, which are manually 
 ## Taskfile.dev
 vnbuild uses [Taskfile.dev](https://taskfile.dev) (installed on your machine) to actually execute the build steps within a module.
 
+> [!NOTE]
+> v1.1.1 includes an update to Task v3.45.4 that, on Windows platforms, overrides some shell utilities for cross-platform alternatives built-in. You may need to update your build scripts or disable the built-ins
+
 ### Taskfiles
 In the top level of your module, you must include a file named `Module.Taskfile.yaml`. This taskfile will be responsible for running tasks at a module level. It has the same functions any project-level taskfile does, but gets called first, and it's error codes will be observed. This file will also be responsible for updating the module's repository via a named task `update`.  
 
