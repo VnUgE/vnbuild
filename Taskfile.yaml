@@ -43,7 +43,10 @@ tasks:
 
     cmds:
       #pack up source code and put in output
-     - cmd: cd .. && tar {{ .EXCLUDES }} -czf '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/src.tgz' {{ .INCLUDES }}
+     - cmd: cd .. && tar{{ if eq OS "windows" }}.exe{{ end }} 
+         {{ .EXCLUDES }} 
+         -czf '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/src.tgz' 
+         {{ .INCLUDES }}
 
   #Remove the output dirs on clean
   clean:

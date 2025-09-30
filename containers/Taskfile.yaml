@@ -29,23 +29,23 @@ tasks:
     vars:
       BUILD_DIR: '{{ .BUILD_DIR }}/{{ .BASE_IMAGE_NAME }}'
     cmds:
-     - cmd: powershell mkdir -f "{{ .BUILD_DIR }}"
-     - cmd: powershell mkdir -f "{{ .BUILD_DIR }}/app"
-     - cmd: powershell cp "{{ .VNBUILD_DIR }}/*" "{{ .BUILD_DIR }}/app"
-     - cmd: powershell cp "{{ .BASE_IMAGE_NAME }}.Dockerfile" "{{ .BUILD_DIR }}/Dockerfile"
+     - cmd: mkdir -p "{{ .BUILD_DIR }}"
+     - cmd: mkdir -p "{{ .BUILD_DIR }}/app"
+     - cmd: cp -r "{{ .VNBUILD_DIR }}/" "{{ .BUILD_DIR }}/app"
+     - cmd: cp "{{ .BASE_IMAGE_NAME }}.Dockerfile" "{{ .BUILD_DIR }}/Dockerfile"
 
   postbuild_success:
     vars:
       BINARY_DIR: '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}'
     cmds:
-     - cmd: powershell mkdir -f "{{ .BINARY_DIR }}"
+     - cmd: mkdir -p "{{ .BINARY_DIR }}"
      - for: { var: BASE_IMAGES }
        cmd: cd "{{ .BUILD_DIR }}/{{ .ITEM }}" &&
-         tar -czf "{{ .BINARY_DIR }}/{{ .ITEM }}.tgz" .
-     
-     - cmd: powershell rm -Recurse -Force "{{ .BUILD_DIR }}"
+         tar{{ if eq OS "windows" }}.exe{{ end }} -czf "{{ .BINARY_DIR }}/{{ .ITEM }}.tgz" .
+
+     - cmd: rm -rf "{{ .BUILD_DIR }}"
        ignore_error: true
-     - cmd: powershell rm -Recurse -Force "{{ .VNBUILD_DIR }}"
+     - cmd: rm -rf "{{ .VNBUILD_DIR }}"
        ignore_error: true
 
 
@@ -61,5 +61,5 @@ tasks:
   clean:
     cmds:
      - for: [ vnbuild/, build/, bin/ ]
-       cmd: powershell rm -Recurse -Force "{{ .ITEM }}"
+       cmd: rm -rf "{{ .ITEM }}"
        ignore_error: true

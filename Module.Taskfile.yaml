@@ -36,15 +36,16 @@ tasks:
       task: build-config
       vars: 
         RUNTIME_ID: '{{ .ITEM }}'
-        BUILD_FLAGS: '{{ .BUILD_FLAGS }}'       
+        BUILD_FLAGS: '{{ .BUILD_FLAGS }}'
         OUT_DIR: '{{ .SCRATCH_DIR }}/build/{{ .ITEM }}'
 
   build-config:
     internal: true
+    dir: 'src'
     requires:
-      vars: [RUNTIME_ID, BUILD_FLAGS, MS_ARGS, OUT_DIR]
+      vars: [RUNTIME_ID, BUILD_FLAGS, OUT_DIR]
     vars:
-      INT_DIR: '{{ .SCRATCH_DIR | default "." }}/obj/{{ .MODULE_NAME }}/'
+      INT_DIR: '{{ .SCRATCH_DIR | default "." }}/obj/'
     cmds:
      - cmd: dotnet publish 
         --sc false
@@ -73,7 +74,7 @@ tasks:
       vars: [RUNTIME_ID]
     cmds:
      - cmd: cd "{{ .SCRATCH_DIR }}/build/{{ .RUNTIME_ID }}" 
-        && tar -czf "{{ .TASKFILE_DIR }}/src/bin/{{ .RUNTIME_ID }}.tgz" .
+        && tar{{ if eq OS "windows" }}.exe{{ end}} -czf "{{ .TASKFILE_DIR }}/src/bin/{{ .RUNTIME_ID }}.tgz" .
 
 #called by build pipeline to clean module
   clean:
