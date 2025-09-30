@@ -56,6 +56,18 @@ jobs:
     useTTY: true
     condition: SUCCESSFUL
     optional: false
+  - !PublishArtifactStep
+    name: publish bins
+    sourcePath: '@project_name@/src/bin'
+    artifacts: '**'
+    condition: SUCCESSFUL
+    optional: true
+  - !PublishArtifactStep
+    name: publish container bins
+    sourcePath: '@project_name@/containers/bin'
+    artifacts: '**'
+    condition: SUCCESSFUL
+    optional: true
   triggers:
   - !BranchUpdateTrigger
     branches: -master
