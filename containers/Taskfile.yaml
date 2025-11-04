@@ -39,15 +39,13 @@ tasks:
       BINARY_DIR: '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}'
     cmds:
      - cmd: mkdir -p "{{ .BINARY_DIR }}"
+
      - for: { var: BASE_IMAGES }
        cmd: cd "{{ .BUILD_DIR }}/{{ .ITEM }}" &&
          tar{{ if eq OS "windows" }}.exe{{ end }} -czf "{{ .BINARY_DIR }}/{{ .ITEM }}.tgz" .
-
-     - cmd: rm -rf "{{ .BUILD_DIR }}"
+     
+     - cmd: rm -rf "{{ .VNBUILD_DIR }}" && rm -rf "{{ .BUILD_DIR }}"
        ignore_error: true
-     - cmd: rm -rf "{{ .VNBUILD_DIR }}"
-       ignore_error: true
-
 
   build-vnbuild:
     cmds:

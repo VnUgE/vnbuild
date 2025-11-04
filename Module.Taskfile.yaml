@@ -4,7 +4,6 @@ version: '3'
 
 vars:
   MODULE_NAME: '{{ .MODULE_NAME | default "vnbuild" }}'
-
   TARGET_ARCHES: [ "linux-x64", "win-x64", "osx-x64", "win-arm64", "linux-arm", "linux-arm64", "osx-arm64" ]
 
 tasks:
@@ -74,15 +73,15 @@ tasks:
       vars: [RUNTIME_ID]
     cmds:
      - cmd: cd "{{ .SCRATCH_DIR }}/build/{{ .RUNTIME_ID }}" 
-        && tar{{ if eq OS "windows" }}.exe{{ end}} -czf "{{ .TASKFILE_DIR }}/src/bin/{{ .RUNTIME_ID }}.tgz" .
+        && tar{{ if eq OS "windows" }}.exe{{ end }} -czf "{{ .TASKFILE_DIR }}/src/bin/{{ .RUNTIME_ID }}.tgz" .
 
 #called by build pipeline to clean module
   clean:
     dir: '{{ .USER_WORKING_DIR }}'
     cmds:
     #clean solution
-    - cmd: dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
-    - cmd: powershell rm -Force {{ .ARCHIVE_FILE_NAME }}
+    - cmd: dotnet clean
+    - cmd: rm -f "{{ .ARCHIVE_FILE_NAME }}"
       ignore_error: true
 
   write-changelog:
