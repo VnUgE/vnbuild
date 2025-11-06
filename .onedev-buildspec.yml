@@ -1,8 +1,8 @@
-version: 40
+version: 43
 jobs:
 - name: Push to GitHub
   steps:
-  - !PushRepository
+  - type: PushRepository
     name: GitHub Sync
     remoteUrl: https://github.com/VnUgE/vnbuild.git
     userName: VnUgE
@@ -10,7 +10,7 @@ jobs:
     force: false
     condition: SUCCESSFUL
     optional: false
-  - !PushRepository
+  - type: PushRepository
     name: Codeberg push sync
     remoteUrl: https://codeberg.org/VnUgE/vnbuild.git
     userName: VnUgE
@@ -19,8 +19,9 @@ jobs:
     condition: SUCCESSFUL
     optional: false
   triggers:
-  - !TagCreateTrigger {}
-  - !BranchUpdateTrigger {}
+  - type: TagCreateTrigger
+  - type: BranchUpdateTrigger
+    userMatch: anyone
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -29,48 +30,52 @@ jobs:
 - name: Mock Build
   jobExecutor: windows
   steps:
-  - !CommandStep
+  - type: CommandStep
     name: Checkout Code
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild build
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild build --verbose --no-delay
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild publish
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild publish --verbose
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !PublishArtifactStep
+  - type: PublishArtifactStep
     name: publish bins
     sourcePath: '@project_name@/src/bin'
-    artifacts: '**'
+    artifacts: '*.tgz'
     condition: SUCCESSFUL
     optional: true
-  - !PublishArtifactStep
+  - type: PublishArtifactStep
     name: publish container bins
     sourcePath: '@project_name@/containers/bin'
     artifacts: '**'
     condition: SUCCESSFUL
     optional: true
   triggers:
-  - !BranchUpdateTrigger
+  - type: BranchUpdateTrigger
     branches: -master
+    userMatch: anyone
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -79,28 +84,31 @@ jobs:
 - name: Build and publish
   jobExecutor: publish-agents
   steps:
-  - !CommandStep
+  - type: CommandStep
     name: Checkout Code
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild build
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild build --no-delay
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild publish
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild publish --ftp "@secret:ftp_server_address@" --sign
     envVars:
@@ -112,8 +120,9 @@ jobs:
     condition: SUCCESSFUL
     optional: false
   triggers:
-  - !BranchUpdateTrigger
+  - type: BranchUpdateTrigger
     branches: master
+    userMatch: anyone
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
