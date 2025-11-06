@@ -63,13 +63,7 @@ jobs:
   - type: PublishArtifactStep
     name: publish bins
     sourcePath: '@project_name@/src/bin'
-    artifacts: '*.tgz'
-    condition: SUCCESSFUL
-    optional: true
-  - type: PublishArtifactStep
-    name: publish container bins
-    sourcePath: '@project_name@/containers/bin'
-    artifacts: '**'
+    artifacts: '*'
     condition: SUCCESSFUL
     optional: true
   triggers:
