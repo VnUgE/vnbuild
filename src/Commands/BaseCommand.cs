@@ -13,9 +13,11 @@ using Serilog;
 
 using VNLib.Tools.Build.Executor.Constants;
 using VNLib.Tools.Build.Executor.Directories;
+using VNLib.Tools.Build.Executor.Extensions;
 
 namespace VNLib.Tools.Build.Executor.Commands
 {
+
     public abstract class BaseCommand : ICommand
     {
         [CommandOption("config", Description = "Sets the build configuration file to use")]
@@ -97,19 +99,13 @@ namespace VNLib.Tools.Build.Executor.Commands
             }
             catch(BuildFailedException be) when (be.InnerException is BuildFailedException bee)
             {
-                console.WithForegroundColor(
-                    ConsoleColor.Red,
-                    o => o.Error.WriteLine("FATAL: Build step failed {0}", bee.Message)
-                );
+                console.WriteRed($"FATAL: Build step failed {bee.Message}");
 
                 throw new CommandException(exitCode: 1);
             }
             catch(BuildFailedException be)
             {
-                console.WithForegroundColor(
-                    ConsoleColor.Red, 
-                    o => o.Error.WriteLine("FATAL: Build step failed {0}", be.Message)
-                );
+                console.WriteRed($"FATAL: Build step failed {be.Message}");
 
                 throw new CommandException(exitCode: 1);
             }
