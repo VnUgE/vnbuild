@@ -1,4 +1,28 @@
-﻿using System;
+﻿/*
+* Copyright (c) 2025 Vaughn Nugent
+* 
+* Library: VNLib
+* Package: vnbuild
+* File: DepsAddCommand.cs
+*
+* DepsAddCommand.cs is part of vnbuild which is part of the larger 
+* VNLib collection of libraries and utilities.
+*
+* vnbuild is free software: you can redistribute it and/or modify 
+* it under the terms of the GNU General Public License as published
+* by the Free Software Foundation, either version 2 of the License,
+* or (at your option) any later version.
+*
+* vnbuild is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+* General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License 
+* along with vnbuild. If not, see http://www.gnu.org/licenses/.
+*/
+
+using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -9,7 +33,12 @@ using Typin.Attributes;
 using Typin.Console;
 using Typin.Exceptions;
 
+using FluentValidation;
+using FluentValidation.Results;
+
 using VNLib.Tools.Build.Executor.Extensions;
+using VNLib.Tools.Build.Executor.Dependencies.Config;
+using VNLib.Tools.Build.Executor.Dependencies.Validation;
 
 namespace VNLib.Tools.Build.Executor.Dependencies
 {
@@ -68,7 +97,8 @@ namespace VNLib.Tools.Build.Executor.Dependencies
                     deps = new();
                 }
 
-                DepsInstallCommand.ValidateManifestJson(deps);
+                DepsManifestValidator validator = new();
+                validator.ValidateAndThrowEx(deps, console);
 
                 // Add the package to the existing manifest
                 AddPackageToManifest(deps);
@@ -79,6 +109,15 @@ namespace VNLib.Tools.Build.Executor.Dependencies
                 await WriteManifestAsync(deps);
 
                 console.WriteGreen("Successfully added dependency");
+            }
+            catch (ValidationException vex)
+            {
+                console.Error.WriteLine("Manifest validation failed:");
+                foreach (ValidationFailure failure in vex.Errors)
+                {
+                    console.Error.WriteLine(" - {0}: {1}", failure.PropertyName, failure.ErrorMessage);
+                }
+                throw new CommandException("Manifest validation failed", vex, exitCode: -3);
             }
             catch (OperationCanceledException)
             {
@@ -121,7 +160,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies
             {
                 AllowTrailingCommas     = true,
                 WriteIndented           = true  //Enable indentation for readability
-            };
+            }; 
 
             await JsonSerializer.SerializeAsync(manifestFile, deps, opts);
         }
