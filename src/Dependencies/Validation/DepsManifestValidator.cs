@@ -45,9 +45,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Validation
         {
             RuleFor(m => m.Dependencies)
                 .NotNull()
-                .WithMessage("Manifest does not contain any dependencies")
-                .NotEmpty()
-                .WithMessage("Manifest does not contain any dependencies");
+                .WithMessage("Dependency array was set to null");
 
             RuleForEach(m => m.Dependencies)
                 .SetValidator(new DependencyValidator());
