@@ -63,8 +63,8 @@ namespace VNLib.Tools.Build.Executor.Constants
             Console.WriteLine();
 
             //Log std out
-            Task stdout = LogStdOutAsync(proc, logName, ctToken.Token);
-            Task stdErr = LogStdErrAsync(proc, logName, ctToken.Token);
+            Task stdout = ProcessStdOutAsync(proc, logName, Console.Out, ctToken.Token);
+            Task stdErr = ProcessStdErrAsync(proc, logName, Console.Error, ctToken.Token);
 
             //Wait for the process to exit
             Task wfe = proc.WaitForExitAsync(ctToken.Token);
@@ -79,58 +79,56 @@ namespace VNLib.Tools.Build.Executor.Constants
             return proc.ExitCode;
         }
 
-        private async Task LogStdOutAsync(Process psi, string logName, CancellationToken cancellation)
+        /// <summary>
+        /// Continuously reads stdout from the given process and writes it to the given output
+        /// until the process exits
+        /// </summary>
+        /// <param name="psi">The process to log</param>
+        /// <param name="logName">The name of the formatted log output</param>
+        /// <param name="output">The detination stream to write the output to</param>
+        /// <param name="cancellation">A token to cancel the read operation</param>
+        /// <returns>A task that completes when all text is read and/or the process has exited</returns>
+        internal static async Task ProcessStdOutAsync(Process psi, string logName, TextWriter output, CancellationToken cancellation)
         {
-            try
+            do
             {
-                string procName = psi.ProcessName;
-                int id = psi.Id;
+                //Read lines from the process
+                string? line = await psi.StandardOutput.ReadLineAsync(cancellation);
 
-                do
+                if (line == null)
                 {
-                    //Read lines from the process
-                    string? line = await psi.StandardOutput.ReadLineAsync(cancellation);
+                    break;
+                }
 
-                    if (line == null)
-                    {
-                        break;
-                    }
-
-                    //Print to log file
-                    Console.WriteLine($"[{logName}]: {line}");
-                } while (!psi.HasExited);
-            }
-            catch (Exception ex)
-            {
-                config.Log.Error(ex, "An exception was raised while reading the process standard output");
-            }
+                //Print to log file
+                output.WriteLine($"[{logName}]: {line}");
+            } while (!psi.HasExited);
         }
 
-        private async Task LogStdErrAsync(Process psi, string logName, CancellationToken cancellation)
+        /// <summary>
+        /// Continuously reads stderr from the given process and writes it to the given output
+        /// until the process exits
+        /// </summary>
+        /// <param name="psi">The process to log</param>
+        /// <param name="logName">The name of the formatted log output</param>
+        /// <param name="output">The detination stream to write the output to</param>
+        /// <param name="cancellation">A token to cancel the read operation</param>
+        /// <returns>A task that completes when all text is read and/or the process has exited</returns>
+        internal static async Task ProcessStdErrAsync(Process psi, string logName, TextWriter output, CancellationToken cancellation)
         {
-            try
+            do
             {
-                string procName = psi.ProcessName;
-                int id = psi.Id;
+                //Read lines from the process
+                string? line = await psi.StandardError.ReadLineAsync(cancellation);
 
-                do
+                if (line == null)
                 {
-                    //Read lines from the process
-                    string? line = await psi.StandardError.ReadLineAsync(cancellation);
+                    break;
+                }
 
-                    if (line == null)
-                    {
-                        break;
-                    }
-
-                    //Print to log file
-                    Console.WriteLine($"[{logName}]: {line}");
-                } while (!psi.HasExited);
-            }
-            catch (Exception ex)
-            {
-                config.Log.Error(ex, "An exception was raised while reading the process standard output");
-            }
+                //Print to log file
+                output.WriteLine($"[{logName}]: {line}");
+            } while (!psi.HasExited);
         }
     }
 }
