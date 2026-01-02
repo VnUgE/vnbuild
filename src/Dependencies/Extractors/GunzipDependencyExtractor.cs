@@ -81,8 +81,14 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
                 WorkingDirectory         = Directory.GetCurrentDirectory(),
             };
 
-           
-            
+            // Overwrite existing files without prompting
+            if (request.AllowOverwrite) psi.ArgumentList.Add("-o");
+            if (request.Verbose)        psi.ArgumentList.Add("-v");
+
+            psi.ArgumentList.Add(request.ArchiveFile.FullName);
+            psi.ArgumentList.Add("-d");
+            psi.ArgumentList.Add(request.DestinationDirectory.FullName);
+
             using Process? proc = Process.Start(psi) ?? throw new InvalidOperationException($"Failed to start unzip command");
 
             await Task.WhenAll(
