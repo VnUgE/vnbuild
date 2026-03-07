@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
+using Typin.Exceptions;
+
 namespace VNLib.Tools.Build.Executor.Constants
 {
     internal sealed class ProcessRunner(BuildConfig config)
@@ -80,7 +82,58 @@ namespace VNLib.Tools.Build.Executor.Constants
         }
 
         /// <summary>
-        /// Continuously reads stdout from the given process and writes it to the given output
+        /// Starts a process from the given <paramref name="psi"/>, streams its stdout and stderr to the
+        /// console, waits for exit, then throws a <see cref="CommandException"/> if the process returns
+        /// a non-zero exit code.
+        /// </summary>
+        /// <param name="psi">Fully configured process start info.</param>
+        /// <param name="processName">Display name used in log prefixes and error messages.</param>
+        /// <param name="cancellationToken">Token to cancel the wait.</param>
+        internal static async Task RunAndThrowAsync(
+            ProcessStartInfo psi,
+            string processName,
+            CancellationToken cancellationToken
+        )
+        {
+            using Process proc = Process.Start(psi)
+                ?? throw new InvalidOperationException($"Failed to start {processName} process");
+
+            await Task.WhenAll(
+                ProcessStdOutAsync(proc, processName, Console.Out, cancellationToken),
+                ProcessStdErrAsync(proc, processName, Console.Error, cancellationToken),
+                proc.WaitForExitAsync(cancellationToken)
+            ).ConfigureAwait(false);
+
+            if (proc.ExitCode != 0)
+            {
+                throw new CommandException($"{processName} failed with exit code {proc.ExitCode}", exitCode: -2);
+            }
+        }
+
+        /// <summary>
+        /// Runs a quick availability/version check for a process by starting it and discarding output.
+        /// Returns <c>true</c> if the process exits with code 0, <c>false</c> otherwise.
+        /// </summary>
+        /// <param name="psi">Start info for the version/availability check invocation.</param>
+        internal static async Task<bool> CheckAvailableAsync(ProcessStartInfo psi)
+        {
+            using Process? proc = Process.Start(psi);
+
+            if (proc is null)
+            {
+                return false;
+            }
+
+            await Task.WhenAll(
+                proc.StandardOutput.ReadToEndAsync(),
+                proc.StandardError.ReadToEndAsync(),
+                proc.WaitForExitAsync()
+            ).ConfigureAwait(false);
+
+            return proc.ExitCode == 0;
+        }
+
+
         /// until the process exits
         /// </summary>
         /// <param name="psi">The process to log</param>
