@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
 * Package: vnbuild
@@ -40,9 +40,8 @@ using VNLib.Tools.Build.Executor.Extensions;
 using VNLib.Tools.Build.Executor.Dependencies.Config;
 using VNLib.Tools.Build.Executor.Dependencies.Validation;
 
-namespace VNLib.Tools.Build.Executor.Dependencies
+namespace VNLib.Tools.Build.Executor.Dependencies.Commands
 {
-
     [Command("deps add", Description = "Adds the desired dependency to the manifest file and nothing else")]
     public class DepsAddCommand : ICommand
     {
@@ -68,6 +67,12 @@ namespace VNLib.Tools.Build.Executor.Dependencies
         public bool Overwrite { get; set; }
 
         /// <summary>
+        /// Disables automatic unpacking of the downloaded artifact after download.
+        /// </summary>
+        [CommandOption("no-unpack", Description = "Disables automatic unpacking after download. The artifact is copied to the destination as-is.")]
+        public bool NoUnpack { get; set; }
+
+        /// <summary>
         /// Specifes the path to the manifest file used to manage the dependencies for the operation
         /// </summary>
         [CommandOption("file", 'f', Description = "The dependency manifest file path")]
@@ -86,11 +91,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies
 
                 if (File.Exists(ManifestFilePath))
                 {
-                    // Load the manifest json
-                    deps = await DepsInstallCommand.LoadManifestFile(
-                        ManifestFilePath,
-                        console.GetCancellationToken()
-                    );
+                    deps = await DepsManifestLoader.LoadManifestAsync(ManifestFilePath, console.GetCancellationToken());
                 }
                 else
                 {
@@ -127,12 +128,16 @@ namespace VNLib.Tools.Build.Executor.Dependencies
 
         private void AddPackageToManifest(DepsManifestJson deps)
         {
+            ArgumentException.ThrowIfNullOrEmpty(SourceUrl);
+            ArgumentException.ThrowIfNullOrEmpty(DestPath);
+
             DependencyJson newDep = new()
             {
-                Source              = SourceUrl!,
-                Destination         = DestPath!,
+                Source              = SourceUrl,
+                Destination         = DestPath,
                 Sum                 = Checksum,
                 Insecure            = Insecure,
+                Unpack              = !NoUnpack,
                 PostInstallCommand  = PostInstallCommand,
                 PreInstallCommand   = PreInstallCommand
             };
@@ -140,29 +145,25 @@ namespace VNLib.Tools.Build.Executor.Dependencies
             bool exists = deps.Dependencies
                 .Any(s => string.Equals(s.Source, newDep.Source, StringComparison.OrdinalIgnoreCase));
 
-            // guard overwriting
             if (exists && !Overwrite)
             {
                 throw new CommandException("Dependency already exists");
             }
 
-            deps.Dependencies = [.. deps.Dependencies, newDep];
+            // When overwriting, replace the existing entry rather than appending a duplicate
+            deps.Dependencies = exists
+                ? [.. deps.Dependencies.Where(s => !string.Equals(s.Source, newDep.Source, StringComparison.OrdinalIgnoreCase)), newDep]
+                : [.. deps.Dependencies, newDep];
         }
 
         private async Task WriteManifestAsync(DepsManifestJson deps)
         {
             FileInfo manifest = new(ManifestFilePath);
 
-            // Open new file and allow for creating a new file or overwriting existing file
-            using FileStream manifestFile = manifest.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            // Create or truncate the file to avoid leftover bytes when overwriting a longer manifest
+            using FileStream manifestFile = manifest.Open(FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
-            JsonSerializerOptions opts = new()
-            {
-                AllowTrailingCommas     = true,
-                WriteIndented           = true  //Enable indentation for readability
-            }; 
-
-            await JsonSerializer.SerializeAsync(manifestFile, deps, opts);
+            await JsonSerializer.SerializeAsync(manifestFile, deps, DepsManifestLoader.WriteOptions);
         }
     }
 }
