@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
 * Package: vnbuild
@@ -30,27 +30,36 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Typin.Console;
 using Typin.Exceptions;
 
 using VNLib.Tools.Build.Executor.Dependencies.Abstractions;
 using VNLib.Tools.Build.Executor.Dependencies.Config;
-using VNLib.Tools.Build.Executor.Extensions;
 
 namespace VNLib.Tools.Build.Executor.Dependencies
 {
-
     /// <summary>
     /// Performs dependency installation using provided downloader and extractors.
     /// </summary>
-    public sealed class DependencyInstaller(
-        IConsole console,
-        IDependencyDownloader downloader,
-        IEnumerable<IDependencyExtractor> extractors
-    )
+    internal sealed class DependencyInstaller
     {
-        private readonly IDependencyDownloader _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
-        private readonly IReadOnlyList<IDependencyExtractor> _extractors = (extractors ?? throw new ArgumentNullException(nameof(extractors))).ToArray();
+        private readonly IDepsConsole _console;
+        private readonly IDependencyDownloader _downloader;
+        private readonly IReadOnlyList<IDependencyExtractor> _extractors;
+
+        public DependencyInstaller(
+            IDepsConsole console,
+            IDependencyDownloader downloader,
+            IEnumerable<IDependencyExtractor> extractors
+        )
+        {
+            ArgumentNullException.ThrowIfNull(console);
+            ArgumentNullException.ThrowIfNull(downloader);
+            ArgumentNullException.ThrowIfNull(extractors);
+
+            _console    = console;
+            _downloader = downloader;
+            _extractors = extractors.ToArray();
+        }
 
         /// <summary>
         /// Installs dependencies defined in <paramref name="manifest"/> using the configured downloader and extractors.
@@ -85,13 +94,13 @@ namespace VNLib.Tools.Build.Executor.Dependencies
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                console.Output.WriteLine($"Starting installation of: {dep.Source} -> {dep.Destination}");
+                _console.WriteLine($"Starting installation of: {dep.Source} -> {dep.Destination}");
 
                 await ProcessDependencyAsync(dep, options, cancellationToken)
                     .ConfigureAwait(false);
             }
 
-            console.WriteGreen("Success: All dependencies installed successfully");
+            _console.WriteSuccess("Success: All dependencies installed successfully");
         }
 
         private static void ValidateOptions(DependencyInstallOptions options)
@@ -129,11 +138,11 @@ namespace VNLib.Tools.Build.Executor.Dependencies
             ArgumentException.ThrowIfNullOrEmpty(dependency.Source);
             ArgumentException.ThrowIfNullOrEmpty(dependency.Destination);
 
-            string resolvedDestination = ResolvePath(dependency.Destination, options.WorkingDirectory);
+            string resolvedDestination = DepsManifestLoader.ResolvePath(dependency.Destination, options.WorkingDirectory);
 
             EnsureDestinationWritable(dependency, resolvedDestination);
 
-            console.Output.WriteLine($"Downloading dependency from {dependency.Source}...");
+            _console.WriteLine($"Downloading dependency from {dependency.Source}...");
 
             FileInfo downloadedFile = await DownloadAsync(
                 dependency,
@@ -141,33 +150,41 @@ namespace VNLib.Tools.Build.Executor.Dependencies
                 cancellationToken
             ).ConfigureAwait(false);
 
-            // If checksum is specified, verify the download against the sum
-            if (!string.IsNullOrWhiteSpace(dependency.Sum))
+            try
             {
-                await VerifyChecksumAsync(dependency.Sum, downloadedFile, cancellationToken)
-                    .ConfigureAwait(false);
-            }
+                // If checksum is specified, verify the download against the sum
+                if (!string.IsNullOrWhiteSpace(dependency.Sum))
+                {
+                    await VerifyChecksumAsync(dependency.Sum, downloadedFile, cancellationToken)
+                        .ConfigureAwait(false);
+                }
 
-            if (dependency.Unpack)
+                if (dependency.Unpack)
+                {
+                    _console.WriteLine($"Extracting dependency to {resolvedDestination}...");
+
+                    await ExtractAsync(
+                        dependency,
+                        downloadedFile,
+                        resolvedDestination,
+                        options.Verbose,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+                }
+                else
+                {
+                    CopyPayload(dependency, downloadedFile, resolvedDestination);
+                }
+
+                _console.WriteLine("Installation complete");
+
+                // TODO: pre/post install scripts (pre_install_cmd / post_install_cmd)
+            }
+            finally
             {
-                console.Output.WriteLine($"Extracting dependency to {resolvedDestination}...");
-
-                await ExtractAsync(
-                    dependency,
-                    downloadedFile,
-                    resolvedDestination,
-                    options.Verbose,
-                    cancellationToken
-                ).ConfigureAwait(false);
+                // Best-effort cleanup of the downloaded temp file
+                try { downloadedFile.Delete(); } catch { /* ignore */ }
             }
-            else
-            {
-                CopyPayload(dependency, downloadedFile, resolvedDestination);
-            }
-
-            console.Output.WriteLine($"Installation complete");
-
-            // TODO: pre/post install scripts when download/extract succeed
         }
 
         private static void EnsureDestinationWritable(DependencyJson dependency, string resolvedDestination)
@@ -249,6 +266,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies
 
         /// <summary>
         /// Extracts an archive payload to the destination directory using a compatible extractor.
+        /// Verifies the extractor tool is available before attempting extraction.
         /// </summary>
         private async Task ExtractAsync(
             DependencyJson dependency,
@@ -258,11 +276,29 @@ namespace VNLib.Tools.Build.Executor.Dependencies
             CancellationToken cancellationToken
         )
         {
-            DirectoryInfo destinationDirectory = new(resolvedDestination);           
+            DirectoryInfo destinationDirectory = new(resolvedDestination);
 
-            IDependencyExtractor? extractor = _extractors.FirstOrDefault(e => e.CanExtract(downloadedFile)) 
-                ?? throw new CommandException($"No extractor found for {downloadedFile.Name}", exitCode: -2);
-            
+            // Try each compatible extractor in registry order, picking the first whose tool is available.
+            IDependencyExtractor? extractor = null;
+
+            foreach (IDependencyExtractor candidate in _extractors.Where(e => e.CanExtract(downloadedFile)))
+            {
+                bool available = await candidate.IsAvailableAsync().ConfigureAwait(false);
+                if (available)
+                {
+                    extractor = candidate;
+                    break;
+                }
+            }
+
+            if (extractor is null)
+            {
+                throw new CommandException(
+                    $"No available extractor found for {downloadedFile.Name}. Ensure the required tool (tar, unzip, or pwsh) is installed.",
+                    exitCode: -2
+                );
+            }
+
             DependencyExtractionRequest extraction = new()
             {
                 ArchiveFile             = downloadedFile,
@@ -313,21 +349,11 @@ namespace VNLib.Tools.Build.Executor.Dependencies
                 "MD5"       => await MD5.HashDataAsync(fs, cancellationToken).ConfigureAwait(false),
                 _ => throw new CommandException($"Unsupported checksum algorithm: {algorithmPart}", exitCode: -2),
             };
-           
+
             if (!CryptographicOperations.FixedTimeEquals(actual, expected))
             {
                 throw new CommandException($"Checksum mismatch for {file.FullName}", exitCode: -2);
             }
-        }
-
-        private static string ResolvePath(string path, string baseDir)
-        {
-            ArgumentException.ThrowIfNullOrEmpty(path);
-            ArgumentException.ThrowIfNullOrEmpty(baseDir);
-
-            return Path.IsPathRooted(path) 
-                ? path 
-                : Path.GetFullPath(Path.Combine(baseDir, path));
         }
     }
 }

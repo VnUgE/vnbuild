@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
 * Package: vnbuild
@@ -26,7 +26,7 @@ using System.Text.Json.Serialization;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Config
 {
-    public class DependencyJson
+    public sealed class DependencyJson
     {
         /// <summary>
         /// The source url of the package to download and unpack. Source is required.

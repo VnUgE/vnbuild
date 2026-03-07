@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
 * Package: vnbuild
@@ -34,9 +34,15 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Abstractions
     public interface IDependencyExtractor
     {
         /// <summary>
-        /// Returns true if the extractor can handle the specified archive file.
+        /// Returns true if this extractor handles the given archive file type based on extension.
+        /// This check is purely based on the file name; it does not verify tool availability.
         /// </summary>
         bool CanExtract(FileInfo archiveFile);
+
+        /// <summary>
+        /// Returns true if the underlying extraction tool is installed and available on the current platform.
+        /// </summary>
+        Task<bool> IsAvailableAsync();
 
         /// <summary>
         /// Extracts the archive into the destination directory.

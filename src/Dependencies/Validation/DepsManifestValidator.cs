@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
 * Package: vnbuild
@@ -39,7 +39,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Validation
     /// <summary>
     /// Validates a dependency manifest and enforces manifest-level rules.
     /// </summary>
-    public sealed class DepsManifestValidator : AbstractValidator<DepsManifestJson>
+    internal sealed class DepsManifestValidator : AbstractValidator<DepsManifestJson>
     {
         public DepsManifestValidator()
         {

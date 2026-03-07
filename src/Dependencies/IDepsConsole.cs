@@ -3,9 +3,9 @@
 * 
 * Library: VNLib
 * Package: vnbuild
-* File: DependencyInstallOptions.cs
+* File: IDepsConsole.cs
 *
-* DependencyInstallOptions.cs is part of vnbuild which is part of the larger 
+* IDepsConsole.cs is part of vnbuild which is part of the larger 
 * VNLib collection of libraries and utilities.
 *
 * vnbuild is free software: you can redistribute it and/or modify 
@@ -25,18 +25,24 @@
 namespace VNLib.Tools.Build.Executor.Dependencies
 {
     /// <summary>
-    /// Describes options for a dependency install operation.
+    /// Abstracts console output for the dependency installer, decoupling
+    /// domain logic from the CLI framework's console interface.
     /// </summary>
-    /// <param name="WorkingDirectory"></param>
-    /// <param name="TempDirectory"></param>
-    /// <param name="ShowProgress"></param>
-    /// <param name="NoScripts"></param>
-    /// <param name="Verbose"></param>
-    public sealed record DependencyInstallOptions(
-        string WorkingDirectory, 
-        string TempDirectory, 
-        bool ShowProgress, 
-        bool NoScripts, 
-        bool Verbose
-    );
+    internal interface IDepsConsole
+    {
+        /// <summary>
+        /// Writes an informational line to standard output.
+        /// </summary>
+        void WriteLine(string message);
+
+        /// <summary>
+        /// Writes an error line to standard error.
+        /// </summary>
+        void WriteError(string message);
+
+        /// <summary>
+        /// Writes a success message, typically highlighted in green.
+        /// </summary>
+        void WriteSuccess(string message);
+    }
 }

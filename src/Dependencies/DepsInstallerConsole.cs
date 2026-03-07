@@ -3,9 +3,9 @@
 * 
 * Library: VNLib
 * Package: vnbuild
-* File: DependencyInstallOptions.cs
+* File: DepsInstallerConsole.cs
 *
-* DependencyInstallOptions.cs is part of vnbuild which is part of the larger 
+* DepsInstallerConsole.cs is part of vnbuild which is part of the larger 
 * VNLib collection of libraries and utilities.
 *
 * vnbuild is free software: you can redistribute it and/or modify 
@@ -22,21 +22,25 @@
 * along with vnbuild. If not, see http://www.gnu.org/licenses/.
 */
 
+using Typin.Console;
+
+using VNLib.Tools.Build.Executor.Extensions;
+
 namespace VNLib.Tools.Build.Executor.Dependencies
 {
     /// <summary>
-    /// Describes options for a dependency install operation.
+    /// Wraps a Typin <see cref="IConsole"/> to implement <see cref="IDepsConsole"/>,
+    /// isolating the dependency installer from the CLI framework's console type.
     /// </summary>
-    /// <param name="WorkingDirectory"></param>
-    /// <param name="TempDirectory"></param>
-    /// <param name="ShowProgress"></param>
-    /// <param name="NoScripts"></param>
-    /// <param name="Verbose"></param>
-    public sealed record DependencyInstallOptions(
-        string WorkingDirectory, 
-        string TempDirectory, 
-        bool ShowProgress, 
-        bool NoScripts, 
-        bool Verbose
-    );
+    internal sealed class DepsInstallerConsole(IConsole console) : IDepsConsole
+    {
+        /// <inheritdoc/>
+        public void WriteLine(string message) => console.Output.WriteLine(message);
+
+        /// <inheritdoc/>
+        public void WriteError(string message) => console.Error.WriteLine(message);
+
+        /// <inheritdoc/>
+        public void WriteSuccess(string message) => console.WriteGreen(message);
+    }
 }

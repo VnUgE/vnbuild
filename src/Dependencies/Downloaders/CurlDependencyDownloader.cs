@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
 * Package: vnbuild
@@ -35,13 +35,11 @@ using VNLib.Tools.Build.Executor.Dependencies.Abstractions;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
 {
-
     /// <summary>
     /// Implements dependency downloading using the curl command-line tool.
     /// Checks for curl availability at construction time and caches the result.
     /// </summary>
-    internal sealed class CurlDependencyDownloader(string workDir, string curlExe = "curl") 
-        : IDependencyDownloader
+    internal sealed class CurlDependencyDownloader(string curlExe = "curl"): IDependencyDownloader
     {
 
         /// <inheritdoc/>
@@ -49,22 +47,13 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
         {
             ProcessStartInfo psi = new(curlExe, "--version")
             {
-                RedirectStandardOutput   = true,
-                RedirectStandardError    = true,
-                UseShellExecute          = false,
-                CreateNoWindow           = true,
-                WorkingDirectory         = workDir,
+                RedirectStandardOutput  = true,
+                RedirectStandardError   = true,
+                UseShellExecute         = false,
+                CreateNoWindow          = true,
             };
 
-            using Process? proc = Process.Start(psi) ?? throw new InvalidOperationException($"Failed to start curl command");
-
-            await Task.WhenAll(
-                proc.StandardOutput.ReadToEndAsync(),
-                proc.StandardError.ReadToEndAsync(),
-                proc.WaitForExitAsync()
-            ).ConfigureAwait(false);
-
-            return proc.ExitCode == 0;
+            return await ProcessRunner.CheckAvailableAsync(psi).ConfigureAwait(false);
         }
 
         private static string GetFileExtensionFromUrl(Uri uri)
@@ -90,7 +79,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
                     request.TargetDir.FullName,
                     Path.GetRandomFileName()                
                 ),
-                 GetFileExtensionFromUrl(request.Source)
+                GetFileExtensionFromUrl(request.Source)
             );
 
             FileInfo targetFile = new(targetFileName);
@@ -127,16 +116,15 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
         {
             ProcessStartInfo psi = new(curlExe)
             {
-                RedirectStandardOutput   = true,
-                RedirectStandardError    = true,
-                UseShellExecute          = false,
-                CreateNoWindow           = true,
-                WorkingDirectory         = workDir,
+                RedirectStandardOutput  = true,
+                RedirectStandardError   = true,
+                UseShellExecute         = false,
+                CreateNoWindow          = true,
             };
 
-            psi.ArgumentList.Add("--location");
-            psi.ArgumentList.Add("--fail");
-            psi.ArgumentList.Add("--compressed");
+            psi.ArgumentList.Add("--location");         // Support redirects by default
+            psi.ArgumentList.Add("--fail");             // enable curl fail-fast mode 
+            psi.ArgumentList.Add("--compressed");       // Enable curl response compression support
             psi.ArgumentList.Add("--output");
             psi.ArgumentList.Add(targetFileName.FullName);
 
@@ -149,28 +137,14 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
                 psi.ArgumentList.Add("--silent");
                 psi.ArgumentList.Add("--show-error");
             }
-            
+
             if (request.AllowInsecure)  psi.ArgumentList.Add("--insecure");
             if (request.Verbose)        psi.ArgumentList.Add("--verbose");
 
             psi.ArgumentList.Add(request.Source.AbsoluteUri);
 
-            using Process? proc = Process.Start(psi) ?? throw new InvalidOperationException($"Failed to start curl command");
-
-            await Task.WhenAll(
-                ProcessRunner.ProcessStdOutAsync(proc, curlExe, Console.Out, cancellationToken),
-                ProcessRunner.ProcessStdErrAsync(proc, curlExe, Console.Error, cancellationToken),
-                proc.WaitForExitAsync(cancellationToken)
-            ).ConfigureAwait(false);
-
-            // curl uses exit code 0 for success; any other code indicates failure
-            if (proc.ExitCode != 0)
-            {
-                throw new CommandException(
-                    $"curl failed with exit code {proc.ExitCode}",
-                    exitCode: -2
-                );
-            }           
+            await ProcessRunner.RunAndThrowAsync(psi, curlExe, cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 }

@@ -38,6 +38,7 @@ using FluentValidation.Results;
 using VNLib.Tools.Build.Executor.Dependencies.Config;
 using VNLib.Tools.Build.Executor.Dependencies.Downloaders;
 using VNLib.Tools.Build.Executor.Dependencies.Validation;
+using VNLib.Tools.Build.Executor.Dependencies.Extractors;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Commands
 {
