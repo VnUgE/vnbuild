@@ -3,9 +3,9 @@
 * 
 * Library: VNLib
 * Package: vnbuild
-* File: PowershellZipExtractor.cs
+* File: UnzipDependencyExtractor.cs
 *
-* PowershellZipExtractor.cs is part of vnbuild which is part of the larger 
+* UnzipDependencyExtractor.cs is part of vnbuild which is part of the larger 
 * VNLib collection of libraries and utilities.
 *
 * vnbuild is free software: you can redistribute it and/or modify 
@@ -33,9 +33,9 @@ using VNLib.Tools.Build.Executor.Dependencies.Abstractions;
 namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
 {
     /// <summary>
-    /// Extracts .zip archives on Windows using the PowerShell <c>Expand-Archive</c> cmdlet.
+    /// Extracts .zip archives using the system <c>unzip</c> command-line tool.
     /// </summary>
-    internal sealed class PowershellZipExtractor(string pwshExe = "powershell") : IDependencyExtractor
+    internal sealed class UnzipDependencyExtractor(string unzipCmd = "unzip") : IDependencyExtractor
     {
         /// <inheritdoc/>
         public bool CanExtract(FileInfo archiveFile)
@@ -46,16 +46,13 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
         /// <inheritdoc/>
         public async Task<bool> IsAvailableAsync()
         {
-            ProcessStartInfo psi = new(pwshExe)
+            ProcessStartInfo psi = new(unzipCmd, "-v")
             {
                 RedirectStandardOutput  = true,
                 RedirectStandardError   = true,
                 UseShellExecute         = false,
                 CreateNoWindow          = true,
             };
-
-            psi.ArgumentList.Add("-Command");
-            psi.ArgumentList.Add("$PSVersionTable.PSVersion");
 
             return await ProcessRunner.CheckAvailableAsync(psi).ConfigureAwait(false);
         }
@@ -63,13 +60,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
         /// <inheritdoc/>
         public async Task ExtractAsync(DependencyExtractionRequest request, CancellationToken cancellationToken)
         {
-            // Build the Expand-Archive command string and pass it via -Command so PowerShell
-            // interprets the arguments as cmdlet parameters rather than positional strings.
-            string forceFlag    = request.AllowOverwrite ? " -Force" : string.Empty;
-            string verboseFlag  = request.Verbose ? " -Verbose" : string.Empty;
-            string command      = $"Expand-Archive -Path '{request.ArchiveFile.FullName}' -DestinationPath '{request.DestinationDirectory.FullName}'{forceFlag}{verboseFlag}";
-
-            ProcessStartInfo psi = new(pwshExe)
+            ProcessStartInfo psi = new(unzipCmd)
             {
                 RedirectStandardOutput  = true,
                 RedirectStandardError   = true,
@@ -77,10 +68,15 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
                 CreateNoWindow          = true,
             };
 
-            psi.ArgumentList.Add("-Command");
-            psi.ArgumentList.Add(command);
+            // Overwrite existing files without prompting
+            if (request.AllowOverwrite) psi.ArgumentList.Add("-o");
+            if (request.Verbose)        psi.ArgumentList.Add("-v");
 
-            await ProcessRunner.RunAndThrowAsync(psi, pwshExe, cancellationToken)
+            psi.ArgumentList.Add(request.ArchiveFile.FullName);
+            psi.ArgumentList.Add("-d");
+            psi.ArgumentList.Add(request.DestinationDirectory.FullName);
+
+            await ProcessRunner.RunAndThrowAsync(psi, unzipCmd, cancellationToken)
                 .ConfigureAwait(false);
         }
     }

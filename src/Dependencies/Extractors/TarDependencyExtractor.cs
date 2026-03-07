@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
 * Package: vnbuild
@@ -22,22 +22,23 @@
 * along with vnbuild. If not, see http://www.gnu.org/licenses/.
 */
 
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Typin.Exceptions;
 
 using VNLib.Tools.Build.Executor.Constants;
 using VNLib.Tools.Build.Executor.Dependencies.Abstractions;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
 {
-
+    /// <summary>
+    /// Extracts tar-based archives (.tar, .tgz, .tar.gz, .tar.bz2, .tar.xz, etc.)
+    /// using the system <c>tar</c> command-line tool.
+    /// </summary>
     internal sealed class TarDependencyExtractor(string tarExePath = "tar") : IDependencyExtractor
     {
+        /// <inheritdoc/>
         public bool CanExtract(FileInfo archiveFile)
         {
             return archiveFile.Extension.ToLowerInvariant() switch
@@ -56,18 +57,32 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
             };
         }
 
+        /// <inheritdoc/>
+        public async Task<bool> IsAvailableAsync()
+        {
+            ProcessStartInfo psi = new(tarExePath, "--version")
+            {
+                RedirectStandardOutput  = true,
+                RedirectStandardError   = true,
+                UseShellExecute         = false,
+                CreateNoWindow          = true,
+            };
+
+            return await ProcessRunner.CheckAvailableAsync(psi).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
         public async Task ExtractAsync(DependencyExtractionRequest request, CancellationToken cancellationToken)
         {
             ProcessStartInfo psi = new(tarExePath)
             {
-                RedirectStandardOutput   = true,
-                RedirectStandardError    = true,
-                UseShellExecute          = false,
-                CreateNoWindow           = true,
-                WorkingDirectory         = Directory.GetCurrentDirectory(),
+                RedirectStandardOutput  = true,
+                RedirectStandardError   = true,
+                UseShellExecute         = false,
+                CreateNoWindow          = true,
             };
 
-            if(request.Verbose) psi.ArgumentList.Add("--verbose");
+            if (request.Verbose) psi.ArgumentList.Add("--verbose");
 
             // Always extract to the specified directory
             psi.ArgumentList.Add("-C");
@@ -76,11 +91,11 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
             psi.ArgumentList.Add("-xf");
             psi.ArgumentList.Add(request.ArchiveFile.FullName);
 
-            // Determine compression based on file extension
+            // Determine compression flag based on file extension
             switch (request.ArchiveFile.Extension.ToLowerInvariant())
             {
                 case ".tar":
-                    // No compression
+                    // No compression flag needed
                     break;
                 case ".tgz":
                 case ".gz":
@@ -93,7 +108,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
                 case ".tar.bz2":
                     psi.ArgumentList.Add("--bzip2");
                     break;
-                
+
                 case ".txz":
                 case ".xz":
                 case ".tar.xz":
@@ -101,22 +116,8 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
                     break;
             }
 
-            using Process? proc = Process.Start(psi) ?? throw new InvalidOperationException($"Failed to start tar command");
-
-            await Task.WhenAll(
-                ProcessRunner.ProcessStdOutAsync(proc, tarExePath, Console.Out, cancellationToken),
-                ProcessRunner.ProcessStdErrAsync(proc, tarExePath, Console.Error, cancellationToken),
-                proc.WaitForExitAsync(cancellationToken)
-            ).ConfigureAwait(false);
-
-            // curl uses exit code 0 for success; any other code indicates failure
-            if (proc.ExitCode != 0)
-            {
-                throw new CommandException(
-                    $"tar failed with exit code {proc.ExitCode}",
-                    exitCode: -2
-                );
-            }
+            await ProcessRunner.RunAndThrowAsync(psi, tarExePath, cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 }
