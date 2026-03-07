@@ -16,7 +16,7 @@
     <Authors>Vaughn Nugent</Authors>
     <Company>Vaughn Nugent</Company>
     <Description>Automatically builds and produces binaries from git-based modules with proper indexing for web based deployments</Description>
-    <Copyright>Copyright © 2025 Vaughn Nugent</Copyright>
+    <Copyright>Copyright © 2026 Vaughn Nugent</Copyright>
     <Product>vnbuild</Product>
     <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/vnbuild</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VnUgE/vnbuild/</RepositoryUrl>
