@@ -30,13 +30,11 @@ namespace VNLib.Tools.Build.Executor.Dependencies
     /// <param name="WorkingDirectory"></param>
     /// <param name="TempDirectory"></param>
     /// <param name="ShowProgress"></param>
-    /// <param name="NoScripts"></param>
     /// <param name="Verbose"></param>
     public sealed record DependencyInstallOptions(
         string WorkingDirectory, 
         string TempDirectory, 
         bool ShowProgress, 
-        bool NoScripts, 
         bool Verbose
     );
 }

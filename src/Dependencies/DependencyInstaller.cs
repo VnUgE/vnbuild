@@ -178,7 +178,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies
 
                 _console.WriteLine("Installation complete");
 
-                // TODO: pre/post install scripts (pre_install_cmd / post_install_cmd)
             }
             finally
             {

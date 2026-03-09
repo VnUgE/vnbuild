@@ -63,20 +63,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Config
         public bool Unpack { get; init; } = true;
 
         /// <summary>
-        /// An optional command string to execute on the terminal after a successful
-        /// install.
-        /// </summary>
-        [JsonPropertyName("post_install_cmd")]
-        public string? PostInstallCommand { get; init; }
-
-        /// <summary>
-        /// An optional command string to execute on the terminal before the dependency 
-        /// is installed.
-        /// </summary>
-        [JsonPropertyName("pre_install_cmd")]
-        public string? PreInstallCommand { get; init; }
-
-        /// <summary>
         /// Allows preventing overwriting destination files or directories when installing.
         /// Defaults to true to maintain current behavior.
         /// </summary>

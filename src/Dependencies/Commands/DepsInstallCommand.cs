@@ -53,12 +53,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
         public bool ShowProgress { get; set; }
 
         /// <summary>
-        /// A flag that disables running pre/post install commands
-        /// </summary>
-        [CommandOption("no-scripts", Description = "Disables running optional pre/post install scripts")]
-        public bool NoScripts { get; set; }
-
-        /// <summary>
         /// Allows the user to set a temporary directory when installing packages
         /// </summary>
         [CommandOption("temp-dir", Description = "A file path to store temporary files to during the install process")]
@@ -112,7 +106,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
                 DependencyInstallOptions opts = new(
                     WorkingDirectory:   DepsManifestLoader.ResolvePath(WorkDir, Directory.GetCurrentDirectory()),
                     TempDirectory:      TempDir,
-                    NoScripts:          NoScripts,
                     ShowProgress:       ShowProgress,
                     Verbose:            Verbose
                 );

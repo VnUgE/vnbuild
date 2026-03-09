@@ -57,12 +57,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
         [CommandOption("insecure", Description = "If vnbuild should allow insecure server paths when downloading")]
         public bool Insecure { get; set; }
 
-        [CommandOption("post-install", Description = "An optional post-install command to run")]
-        public string? PostInstallCommand { get; set; }
-
-        [CommandOption("pre-install", Description = "An optional pre-install command to run")]
-        public string? PreInstallCommand { get; set; }
-
         [CommandOption("overwrite", Description = "Allows overwriting an existing dependency")]
         public bool Overwrite { get; set; }
 
@@ -137,9 +131,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
                 Destination         = DestPath,
                 Sum                 = Checksum,
                 Insecure            = Insecure,
-                Unpack              = !NoUnpack,
-                PostInstallCommand  = PostInstallCommand,
-                PreInstallCommand   = PreInstallCommand
+                Unpack              = !NoUnpack
             };
 
             bool exists = deps.Dependencies
