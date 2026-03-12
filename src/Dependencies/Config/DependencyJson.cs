@@ -26,6 +26,10 @@ using System.Text.Json.Serialization;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Config
 {
+    /// <summary>
+    /// Represents a single dependency json object in a dependency 
+    /// manifest.
+    /// </summary>
     public sealed class DependencyJson
     {
         /// <summary>

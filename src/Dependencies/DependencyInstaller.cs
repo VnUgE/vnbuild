@@ -83,11 +83,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies
                 return;
             }
 
-            if (!(await _downloader.IsAvailableAsync()))
-            {
-                throw new CommandException("No dependency downloader is available", exitCode: -2);
-            }
-
             Directory.CreateDirectory(options.TempDirectory);
 
             foreach (DependencyJson dep in manifest.Dependencies)

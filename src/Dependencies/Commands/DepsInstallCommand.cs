@@ -59,7 +59,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
         public string TempDir { get; set; } = Path.GetTempPath();
 
         /// <summary>
-        /// Specifes the path to the manifest file used to manage the dependencies for the operation
+        /// Specifies the path to the manifest file used to manage the dependencies for the operation
         /// </summary>
         [CommandOption("file", 'f', Description = "The dependency manifest file path")]
         public string ManifestFilePath { get; set; } = "deps.json";
@@ -73,11 +73,10 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
         /// <summary>
         /// Gets or sets a value indicating whether to display verbose logging output during
         /// </summary>
-        [CommandOption("verbose", Description = "Enables verbose logging output")]
+        [CommandOption("verbose", 'v', Description = "Enables verbose logging output")]
         public bool Verbose { get; set; }
 
         // TODO: --parallel and --atomic flags are planned but not yet implemented.
-        // See .github/ISSUE_TEMPLATE/deps-future-features.md for implementation details.
 
         public virtual async ValueTask ExecuteAsync(IConsole console)
         {
@@ -87,7 +86,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
             {
                 depsConsole.WriteLine($"Loading manifest {ManifestFilePath} with working dir {WorkDir}");               
 
-                // Load the depenency manifest file from the disk
+                // Load the dependency manifest file from the disk
                 DepsManifestJson deps = await DepsManifestLoader.LoadManifestAsync(
                     DepsManifestLoader.ResolvePath(ManifestFilePath, WorkDir), 
                     console.GetCancellationToken()

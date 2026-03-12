@@ -32,10 +32,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Abstractions
     /// </summary>
     public interface IDependencyDownloader
     {
-        /// <summary>
-        /// Returns true if the downloader can execute on the current platform.
-        /// </summary>
-        Task<bool> IsAvailableAsync();
 
         /// <summary>
         /// Downloads the specified dependency artifact to the target file.
