@@ -24,7 +24,6 @@
 
 using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Typin;
@@ -39,6 +38,7 @@ using VNLib.Tools.Build.Executor.Dependencies.Config;
 using VNLib.Tools.Build.Executor.Dependencies.Downloaders;
 using VNLib.Tools.Build.Executor.Dependencies.Validation;
 using VNLib.Tools.Build.Executor.Dependencies.Extractors;
+using VNLib.Tools.Build.Executor.Dependencies.Abstractions;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Commands
 {
@@ -96,9 +96,12 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
                 new DepsManifestValidator()
                     .ValidateAndThrowEx(deps, console);
 
+                // Get first available downloader or throw
+                IDependencyDownloader downloader = await GetAvailableDownloader();
+
                 DependencyInstaller installer = new(
                     depsConsole,
-                    new CurlDependencyDownloader(),
+                    downloader,
                     DependencyExtractorRegistry.CreateExtractors()
                 );
 
@@ -126,6 +129,26 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
             {
                 throw new CommandException("Operation cancelled", exitCode: 0);
             }
+        }
+
+        private static async Task<IDependencyDownloader> GetAvailableDownloader()
+        {
+            // Try curl downloader first
+            bool hasCurl = await CurlDependencyDownloader.IsAvailableAsync();
+            if (hasCurl)
+            {
+                return new CurlDependencyDownloader();
+            }
+
+            // Try powershell for download command (irw)
+            bool hasPowershell = await PowershellCmdRunner.IsAvailableAsync();
+            if (hasPowershell)
+            {
+                PowershellCmdRunner runner = new();
+                return new PowershellDependencyDownloader(runner);
+            }
+
+            throw new CommandException("Missing required downloader application. Please install `curl` or `pwsh`.");
         }
     }
 }

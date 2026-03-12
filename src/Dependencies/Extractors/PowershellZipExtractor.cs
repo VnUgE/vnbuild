@@ -22,12 +22,11 @@
 * along with vnbuild. If not, see http://www.gnu.org/licenses/.
 */
 
-using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using VNLib.Tools.Build.Executor.Constants;
 using VNLib.Tools.Build.Executor.Dependencies.Abstractions;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
@@ -35,52 +34,38 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
     /// <summary>
     /// Extracts .zip archives on Windows using the PowerShell <c>Expand-Archive</c> cmdlet.
     /// </summary>
-    internal sealed class PowershellZipExtractor(string pwshExe = "powershell") : IDependencyExtractor
+    internal sealed class PowershellZipExtractor(PowershellCmdRunner runner) : IDependencyExtractor
     {
-        /// <inheritdoc/>
-        public bool CanExtract(FileInfo archiveFile)
-        {
-            return archiveFile.Extension.ToLowerInvariant() == ".zip";
-        }
+        private readonly PowershellCmdRunner _runner = runner;
 
         /// <inheritdoc/>
-        public async Task<bool> IsAvailableAsync()
-        {
-            ProcessStartInfo psi = new(pwshExe)
-            {
-                RedirectStandardOutput  = true,
-                RedirectStandardError   = true,
-                UseShellExecute         = false,
-                CreateNoWindow          = true,
-            };
+        public bool CanExtract(FileInfo archiveFile) 
+            => archiveFile.Extension.Equals(".zip", System.StringComparison.InvariantCultureIgnoreCase);
 
-            psi.ArgumentList.Add("-Command");
-            psi.ArgumentList.Add("$PSVersionTable.PSVersion");
-
-            return await ProcessRunner.CheckAvailableAsync(psi).ConfigureAwait(false);
-        }
+        /// <inheritdoc/>
+        public async Task<bool> IsAvailableAsync() 
+            => await _runner.IsAvailableAsync().ConfigureAwait(false);
 
         /// <inheritdoc/>
         public async Task ExtractAsync(DependencyExtractionRequest request, CancellationToken cancellationToken)
         {
-            // Build the Expand-Archive command string and pass it via -Command so PowerShell
-            // interprets the arguments as cmdlet parameters rather than positional strings.
-            string forceFlag    = request.AllowOverwrite ? " -Force" : string.Empty;
-            string verboseFlag  = request.Verbose ? " -Verbose" : string.Empty;
-            string command      = $"Expand-Archive -Path '{request.ArchiveFile.FullName}' -DestinationPath '{request.DestinationDirectory.FullName}'{forceFlag}{verboseFlag}";
 
-            ProcessStartInfo psi = new(pwshExe)
-            {
-                RedirectStandardOutput  = true,
-                RedirectStandardError   = true,
-                UseShellExecute         = false,
-                CreateNoWindow          = true,
-            };
+            StringBuilder sb = new();
+            
+            sb.Append("Expand-Archive");
 
-            psi.ArgumentList.Add("-Command");
-            psi.ArgumentList.Add(command);
+            sb.Append(" -Path '");
+            sb.Append(request.ArchiveFile.FullName);
+            sb.Append('\'');
 
-            await ProcessRunner.RunAndThrowAsync(psi, pwshExe, cancellationToken)
+            sb.Append(" -DestinationPath '");
+            sb.Append(request.DestinationDirectory.FullName);
+            sb.Append('\'');
+
+            if (request.AllowOverwrite) sb.Append(" -Force");
+            if (request.Verbose) sb.Append(" -Verbose");
+
+            await _runner.ExecCommandAsync(sb.ToString(), cancellationToken)
                 .ConfigureAwait(false);
         }
     }

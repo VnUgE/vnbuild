@@ -35,6 +35,8 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
     /// </summary>
     internal static class DependencyExtractorRegistry
     {
+        private static readonly PowershellCmdRunner _pwsh = new();
+
         /// <summary>
         /// Creates the ordered list of dependency extractors. Extractors are evaluated in
         /// order — the first one whose <c>CanExtract</c> returns true and whose tool is
@@ -44,7 +46,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
         [
             new TarDependencyExtractor(),
             new UnzipDependencyExtractor(),     // Unix unzip for .zip files
-            new PowershellZipExtractor(),       // PowerShell fallback for .zip on Windows
+            new PowershellZipExtractor(_pwsh),       // PowerShell fallback for .zip on Windows
         ];
     }
 }

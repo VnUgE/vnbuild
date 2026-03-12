@@ -43,7 +43,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
     {
 
         /// <inheritdoc/>
-        public async Task<bool> IsAvailableAsync()
+        public static async Task<bool> IsAvailableAsync(string curlExe = "curl")
         {
             ProcessStartInfo psi = new(curlExe, "--version")
             {
@@ -56,7 +56,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
             return await ProcessRunner.CheckAvailableAsync(psi).ConfigureAwait(false);
         }
 
-        private static string GetFileExtensionFromUrl(Uri uri)
+        internal static string GetFileExtensionFromUrl(Uri uri)
         {
             string path = uri.AbsolutePath;
             string extension = Path.GetExtension(path);
