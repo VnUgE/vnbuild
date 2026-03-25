@@ -134,6 +134,9 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
                 Unpack              = !NoUnpack
             };
 
+            // Validate the new entry before mutating the manifest
+            new DependencyValidator().ValidateAndThrow(newDep);
+
             bool exists = deps.Dependencies
                 .Any(s => string.Equals(s.Source, newDep.Source, StringComparison.OrdinalIgnoreCase));
 
