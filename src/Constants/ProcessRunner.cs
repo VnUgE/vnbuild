@@ -134,6 +134,8 @@ namespace VNLib.Tools.Build.Executor.Constants
         }
 
 
+        /// <summary>
+        /// Continuously reads stdout from the given process and writes it to the given output
         /// until the process exits
         /// </summary>
         /// <param name="psi">The process to log</param>
