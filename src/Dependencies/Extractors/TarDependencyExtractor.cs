@@ -33,7 +33,7 @@ using VNLib.Tools.Build.Executor.Dependencies.Abstractions;
 namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
 {
     /// <summary>
-    /// Extracts tar-based archives (.tar, .tgz, .tar.gz, .tar.bz2, .tar.xz, etc.)
+    /// Extracts tar-based archives (.tar, .tgz, .tbz2, .txz, .tar.gz, .tar.bz2, .tar.xz)
     /// using the system <c>tar</c> command-line tool.
     /// </summary>
     internal sealed class TarDependencyExtractor(string tarExePath = "tar") : IDependencyExtractor
@@ -41,20 +41,17 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
         /// <inheritdoc/>
         public bool CanExtract(FileInfo archiveFile)
         {
-            return archiveFile.Extension.ToLowerInvariant() switch
-            {
-                ".tar"      => true,
-                ".gz"       => true,
-                ".bz2"      => true,
-                ".xz"       => true,
-                ".tgz"      => true,
-                ".tbz2"     => true,
-                ".txz"      => true,
-                ".tar.gz"   => true,
-                ".tar.bz2"  => true,
-                ".tar.xz"   => true,
-                _           => false,
-            };
+            // FileInfo.Extension returns only the last dot-segment, so multi-dot extensions
+            // such as ".tar.gz" must be checked against the full file name.
+            string name = archiveFile.Name.ToLowerInvariant();
+
+            return name.EndsWith(".tar")
+                || name.EndsWith(".tgz")
+                || name.EndsWith(".tbz2")
+                || name.EndsWith(".txz")
+                || name.EndsWith(".tar.gz")
+                || name.EndsWith(".tar.bz2")
+                || name.EndsWith(".tar.xz");
         }
 
         /// <inheritdoc/>
@@ -91,7 +88,9 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
             psi.ArgumentList.Add("-xf");
             psi.ArgumentList.Add(request.ArchiveFile.FullName);
 
-            // Determine compression flag based on file extension
+            // Determine compression flag based on file extension.
+            // For multi-dot names (e.g. archive.tar.gz), Extension returns the last
+            // segment (.gz), which is sufficient to select the right flag.
             switch (request.ArchiveFile.Extension.ToLowerInvariant())
             {
                 case ".tar":
@@ -99,19 +98,16 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
                     break;
                 case ".tgz":
                 case ".gz":
-                case ".tar.gz":
                     psi.ArgumentList.Add("--gzip");
                     break;
 
                 case ".tbz2":
                 case ".bz2":
-                case ".tar.bz2":
                     psi.ArgumentList.Add("--bzip2");
                     break;
 
                 case ".txz":
                 case ".xz":
-                case ".tar.xz":
                     psi.ArgumentList.Add("--xz");
                     break;
             }
