@@ -68,8 +68,10 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
                 CreateNoWindow          = true,
             };
 
-            // Overwrite existing files without prompting
+            // -o: overwrite existing files without prompting
+            // -n: never overwrite; skip conflicting files silently
             if (request.AllowOverwrite) psi.ArgumentList.Add("-o");
+            else                        psi.ArgumentList.Add("-n");
             if (request.Verbose)        psi.ArgumentList.Add("-v");
 
             psi.ArgumentList.Add(request.ArchiveFile.FullName);
