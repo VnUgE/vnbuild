@@ -99,13 +99,13 @@ namespace VNLib.Tools.Build.Executor.Commands
             }
             catch(BuildFailedException be) when (be.InnerException is BuildFailedException bee)
             {
-                console.WriteRed($"FATAL: Build step failed {bee.Message}");
+                console.WriteError($"FATAL: Build step failed {bee.Message}");
 
                 throw new CommandException(exitCode: 1);
             }
             catch(BuildFailedException be)
             {
-                console.WriteRed($"FATAL: Build step failed {be.Message}");
+                console.WriteError($"FATAL: Build step failed {be.Message}");
 
                 throw new CommandException(exitCode: 1);
             }
