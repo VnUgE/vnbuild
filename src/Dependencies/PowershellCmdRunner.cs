@@ -22,6 +22,7 @@
 * along with vnbuild. If not, see http://www.gnu.org/licenses/.
 */
 
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -65,6 +66,19 @@ namespace VNLib.Tools.Build.Executor.Dependencies
         /// </summary>
         /// <returns>True if powershell is available</returns>
         public Task<bool> IsAvailableAsync() => IsAvailableAsync(pwshExe);
+
+        /// <summary>
+        /// Returns a single-quoted PowerShell literal for the specified value.
+        /// </summary>
+        /// <param name="value">The value to encode as a literal.</param>
+        /// <returns>A PowerShell single-quoted literal with embedded quotes escaped.</returns>
+        /// <exception cref="System.ArgumentNullException"><paramref name="value"/> is <see langword="null" />.</exception>
+        internal static string QuoteLiteral(string value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            return $"'{value.Replace("'", "''", System.StringComparison.Ordinal)}'";
+        }
 
         /// <summary>
         /// Executes a powershell command on the configured powershell executable

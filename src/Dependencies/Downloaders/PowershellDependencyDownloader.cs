@@ -93,13 +93,11 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
 
             cmd.Append("Invoke-WebRequest");
 
-            cmd.Append(" -Uri '");
-            cmd.Append(request.Source);
-            cmd.Append('\'');
+            cmd.Append(" -Uri ");
+            cmd.Append(PowershellCmdRunner.QuoteLiteral(request.Source.AbsoluteUri));
 
-            cmd.Append(" -OutFile '");
-            cmd.Append(targetFile.FullName);
-            cmd.Append('\'');
+            cmd.Append(" -OutFile ");
+            cmd.Append(PowershellCmdRunner.QuoteLiteral(targetFile.FullName));
 
             cmd.Append(" -Method Get");           
 

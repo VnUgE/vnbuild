@@ -54,13 +54,11 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
             
             sb.Append("Expand-Archive");
 
-            sb.Append(" -Path '");
-            sb.Append(request.ArchiveFile.FullName);
-            sb.Append('\'');
+            sb.Append(" -Path ");
+            sb.Append(PowershellCmdRunner.QuoteLiteral(request.ArchiveFile.FullName));
 
-            sb.Append(" -DestinationPath '");
-            sb.Append(request.DestinationDirectory.FullName);
-            sb.Append('\'');
+            sb.Append(" -DestinationPath ");
+            sb.Append(PowershellCmdRunner.QuoteLiteral(request.DestinationDirectory.FullName));
 
             if (request.AllowOverwrite) sb.Append(" -Force");
             if (request.Verbose) sb.Append(" -Verbose");
