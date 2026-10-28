@@ -40,7 +40,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
 
         /// <inheritdoc/>
         public bool CanExtract(FileInfo archiveFile) 
-            => archiveFile.Extension.Equals(".zip", System.StringComparison.InvariantCultureIgnoreCase);
+            => archiveFile.Name.EndsWith(".zip", System.StringComparison.InvariantCultureIgnoreCase);
 
         /// <inheritdoc/>
         public async Task<bool> IsAvailableAsync() 

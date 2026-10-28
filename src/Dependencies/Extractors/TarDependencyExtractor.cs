@@ -24,6 +24,7 @@
 
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,6 +39,10 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
     /// </summary>
     internal sealed class TarDependencyExtractor(string tarExePath = "tar") : IDependencyExtractor
     {
+        static readonly string[] AllowedExtensions = [
+            ".tar", ".tgz", ".tbz2", ".txz", ".tar.gz", ".tar.bz2", ".tar.xz"    
+        ];
+
         /// <inheritdoc/>
         public bool CanExtract(FileInfo archiveFile)
         {
@@ -45,13 +50,7 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
             // such as ".tar.gz" must be checked against the full file name.
             string name = archiveFile.Name.ToLowerInvariant();
 
-            return name.EndsWith(".tar")
-                || name.EndsWith(".tgz")
-                || name.EndsWith(".tbz2")
-                || name.EndsWith(".txz")
-                || name.EndsWith(".tar.gz")
-                || name.EndsWith(".tar.bz2")
-                || name.EndsWith(".tar.xz");
+            return AllowedExtensions.Any(name.EndsWith);
         }
 
         /// <inheritdoc/>

@@ -56,11 +56,26 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Downloaders
             return await ProcessRunner.CheckAvailableAsync(psi).ConfigureAwait(false);
         }
 
-        internal static string GetFileExtensionFromUrl(Uri uri)
+        static readonly string[] CommonExtensions = [
+            ".tar", ".tar.gz", ".tgz", ".gz", ".zip", ".tar.bz2", ".tar.xz",
+        ];
+
+        internal static string? GetFileExtensionFromUrl(Uri uri)
         {
             string path = uri.AbsolutePath;
-            string extension = Path.GetExtension(path);
-            return string.IsNullOrEmpty(extension) ? ".bin" : extension;
+
+            // test path against known common, and double extensions like tar.gz
+            foreach (string ext in CommonExtensions)
+            {
+                if (path.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ext;
+                }
+            }
+
+            // Otherwise use standard file extensions, and make lowercase for extraction
+            return Path.GetExtension(path)
+                ?.ToLowerInvariant();
         }
 
         /// <inheritdoc/>

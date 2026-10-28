@@ -24,6 +24,7 @@
 
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,10 +38,13 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
     /// </summary>
     internal sealed class UnzipDependencyExtractor(string unzipCmd = "unzip") : IDependencyExtractor
     {
+        static readonly string[] AllowedExtensions = [".zip", ".gz"];
+
         /// <inheritdoc/>
         public bool CanExtract(FileInfo archiveFile)
         {
-            return archiveFile.Extension.ToLowerInvariant() == ".zip";
+            string name = archiveFile.Name.ToLowerInvariant();
+            return AllowedExtensions.Any(name.EndsWith);
         }
 
         /// <inheritdoc/>
@@ -54,7 +58,8 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Extractors
                 CreateNoWindow          = true,
             };
 
-            return await ProcessRunner.CheckAvailableAsync(psi).ConfigureAwait(false);
+            return await ProcessRunner.CheckAvailableAsync(psi)
+                .ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
