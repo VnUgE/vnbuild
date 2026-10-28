@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,10 +10,10 @@ using VNLib.Tools.Build.Executor.Model;
 namespace VNLib.Tools.Build.Executor.Projects
 {
 
-    internal sealed class DotnetProject(ModuleConfig mod, ProjectConfig config, IDirectoryIndex index) 
+    internal sealed class MsbuildProject(ModuleConfig mod, ProjectConfig config, IDirectoryIndex index) 
         : ModuleProject(mod, config, index)
     {
-        public override IProjectData ProjectData { get; } = new DotnetProjectDom();
+        public override IProjectData ProjectData { get; } = new MsbuildProjectDom();
 
         ///<inheritdoc/>
         public override async Task LoadAsync(TaskfileVars vars)
