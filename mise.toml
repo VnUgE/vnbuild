@@ -1,0 +1,14 @@
+[tools]
+dotnet = "8.0"
+task = "3.54"
+"dotnet:GitVersion.Tool" = "6.4.0"
+
+[env]
+DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1"
+DOTNET_CLI_TELEMETRY_OPTOUT = "1"
+
+[tasks.ci-task]
+run = 'task'
+
+[tasks.ci-vnbuild]
+run = 'vnbuild'
