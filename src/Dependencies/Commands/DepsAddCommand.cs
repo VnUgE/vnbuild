@@ -1,4 +1,4 @@
-﻿/*
+/*
 * Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
@@ -72,6 +72,8 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
         [CommandOption("file", 'f', Description = "The dependency manifest file path")]
         public string ManifestFilePath { get; set; } = "deps.json";
 
+        private readonly DepsManifestValidator _manifestValidator = new();
+
         public virtual async ValueTask ExecuteAsync(IConsole console)
         {
             try
@@ -85,23 +87,29 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
 
                 if (File.Exists(ManifestFilePath))
                 {
-                    deps = await DepsManifestLoader.LoadManifestAsync(ManifestFilePath, console.GetCancellationToken());
+                    deps = await DepsManifestLoader.LoadManifestAsync(ManifestFilePath, console.GetCancellationToken())
+                        .ConfigureAwait(false);
+
+                    // Validate existing manifest for errors before adding package
+                    _manifestValidator.ValidateAndThrowEx(deps, console);
                 }
                 else
                 {
                     deps = new();
-                }
-
-                DepsManifestValidator validator = new();
-                validator.ValidateAndThrowEx(deps, console);
+                }             
 
                 // Add the package to the existing manifest
                 AddPackageToManifest(deps);
+
+                // Validate the combined entries before persisting the manifest
+                _manifestValidator.ValidateAndThrowEx(deps, console);
+                
                 console.Output.WriteLine("Added package to manifest");
 
                 console.Output.WriteLine("Writing manifest file to {0}", ManifestFilePath);
 
-                await WriteManifestAsync(deps);
+                await WriteManifestAsync(deps)
+                    .ConfigureAwait(false);
 
                 console.WriteGreen("Successfully added dependency");
             }
@@ -134,9 +142,6 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
                 Unpack              = !NoUnpack
             };
 
-            // Validate the new entry before mutating the manifest
-            new DependencyValidator().ValidateAndThrow(newDep);
-
             bool exists = deps.Dependencies
                 .Any(s => string.Equals(s.Source, newDep.Source, StringComparison.OrdinalIgnoreCase));
 
@@ -156,9 +161,10 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
             FileInfo manifest = new(ManifestFilePath);
 
             // Create or truncate the file to avoid leftover bytes when overwriting a longer manifest
-            using FileStream manifestFile = manifest.Open(FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+            await using FileStream manifestFile = manifest.Open(FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
-            await JsonSerializer.SerializeAsync(manifestFile, deps, DepsManifestLoader.WriteOptions);
+            await JsonSerializer.SerializeAsync(manifestFile, deps, DepsManifestLoader.WriteOptions)
+                .ConfigureAwait(false);
         }
     }
 }
