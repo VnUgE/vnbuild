@@ -96,6 +96,13 @@ namespace VNLib.Tools.Build.Executor.Dependencies.Commands
                 new DepsManifestValidator()
                     .ValidateAndThrowEx(deps, console);
 
+                // Allow empty manifests to succeed without external tools
+                if (deps.Dependencies.Length == 0)
+                {
+                    depsConsole.WriteLine("Manifest contains no dependencies; nothing to install.");
+                    return;
+                }
+
                 // Get first available downloader or throw
                 IDependencyDownloader downloader = await GetAvailableDownloader();
 
