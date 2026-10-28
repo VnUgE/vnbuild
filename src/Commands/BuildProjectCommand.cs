@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,9 +6,9 @@ using Typin.Console;
 using Typin.Attributes;
 
 namespace VNLib.Tools.Build.Executor.Commands
-{
-    [Command("build-project", Description = "Builds a named project inside a named module")]
-    public sealed class BuildProjectCommand : BaseCommand
+{   
+    [Command("build project", Description = "Builds a named project inside a named module")]
+    public class BuildProjectCommand : BaseCommand
     {
 
         [CommandParameter(1, Name = "Module", Description = "The name of the module that contains the project to build")]
@@ -35,4 +35,9 @@ namespace VNLib.Tools.Build.Executor.Commands
             console.WithForegroundColor(ConsoleColor.Green, static o => o.Output.WriteLine("Completed successfully"));
         }
     }
+
+    [Obsolete("'build-project' command is replaced with 'build project' command")]
+    [Command("build-project", Description = "obsolete - use 'build project' command instead")]
+    public sealed class BuildProjectOld : BuildProjectCommand
+    { }
 }

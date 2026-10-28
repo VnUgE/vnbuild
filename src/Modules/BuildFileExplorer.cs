@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -185,7 +185,7 @@ namespace VNLib.Tools.Build.Executor.Modules
                 };
 
                 //Create the new project artifact
-                DotnetProject project = new(mod, conf, index);
+                MsbuildProject project = new(mod, conf, index);
 
                 projects.AddLast(project);
             }

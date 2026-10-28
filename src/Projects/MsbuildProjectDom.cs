@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.IO;
 using System.Xml;
@@ -9,21 +9,14 @@ using VNLib.Tools.Build.Executor.Model;
 namespace VNLib.Tools.Build.Executor.Projects
 {
 
-    internal sealed class DotnetProjectDom : IProjectData
+    internal sealed class MsbuildProjectDom : IProjectData
     {
-        private readonly XmlDocument _dom;
-
-        public DotnetProjectDom()
-        {
-            _dom = new();
-        }
+        private readonly XmlDocument _dom = new();
 
         public void Load(Stream stream)
         {
             _dom.Load(stream);
-        }
-
-        private XmlNode? project => _dom["Project"];
+        }     
 
         public string? Description => GetProperty("Description");
         public string? Authors => GetProperty("Authors");
@@ -35,26 +28,29 @@ namespace VNLib.Tools.Build.Executor.Projects
 
         public string? this[string index] => GetProperty(index);
 
-        public string? GetProperty(string name) => GetItemAtPath($"PropertyGroup/{name}");
+        public string? GetProperty(string name) => GetItemAtPath($"Project/PropertyGroup/{name}");
 
-        public string? GetItemAtPath(string path) => project!.SelectSingleNode(path)?.InnerText;
+        public string? GetItemAtPath(string path) => _dom.SelectSingleNode(path)?.InnerText;
 
         public string[] GetProjectRefs()
         {
             //Get the item group attr
-            XmlNodeList? projectRefs = project?.SelectNodes("ItemGroup/ProjectReference");
+            XmlNodeList? projectRefs = _dom?.SelectNodes("Project/ItemGroup/ProjectReference");
 
             if (projectRefs != null)
             {
-                List<string> refs = new();
+                List<string> refs = [];
+
                 foreach (XmlNode projRef in projectRefs)
                 {
                     //Get the project ref via its include attribute
                     refs.Add(projRef.Attributes["Include"].Value!);
                 }
-                return refs.ToArray();
+
+                return [.. refs];
             }
-            return Array.Empty<string>();
+
+            return [];
         }
     }
 }
