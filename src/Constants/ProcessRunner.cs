@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
-using System.Threading;
 using System.Diagnostics;
+using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -112,25 +113,34 @@ namespace VNLib.Tools.Build.Executor.Constants
 
         /// <summary>
         /// Runs a quick availability/version check for a process by starting it and discarding output.
-        /// Returns <c>true</c> if the process exits with code 0, <c>false</c> otherwise.
         /// </summary>
         /// <param name="psi">Start info for the version/availability check invocation.</param>
+        /// <returns><c>true</c> if the process exits with code 0, <c>false</c> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"></exception>
         internal static async Task<bool> CheckAvailableAsync(ProcessStartInfo psi)
         {
-            using Process? proc = Process.Start(psi);
+            try
+            {
+                using Process? proc = Process.Start(psi);
 
-            if (proc is null)
+                if (proc is null)
+                {
+                    return false;
+                }
+
+                await Task.WhenAll(
+                   proc.StandardOutput.ReadToEndAsync(),
+                   proc.StandardError.ReadToEndAsync(),
+                   proc.WaitForExitAsync()
+               ).ConfigureAwait(false);
+
+                return proc.ExitCode == 0;
+            }
+            // Catch ERROR_FILE_NOT_FOUND (2) and ERROR_PATH_NOT_FOUND (3)
+            catch (Win32Exception wex) when (wex.ErrorCode == 2 || wex.ErrorCode == 3)
             {
                 return false;
             }
-
-            await Task.WhenAll(
-                proc.StandardOutput.ReadToEndAsync(),
-                proc.StandardError.ReadToEndAsync(),
-                proc.WaitForExitAsync()
-            ).ConfigureAwait(false);
-
-            return proc.ExitCode == 0;
         }
 
 
@@ -140,7 +150,7 @@ namespace VNLib.Tools.Build.Executor.Constants
         /// </summary>
         /// <param name="psi">The process to log</param>
         /// <param name="logName">The name of the formatted log output</param>
-        /// <param name="output">The detination stream to write the output to</param>
+        /// <param name="output">The destination stream to write the output to</param>
         /// <param name="cancellation">A token to cancel the read operation</param>
         /// <returns>A task that completes when all text is read and/or the process has exited</returns>
         internal static async Task ProcessStdOutAsync(Process psi, string logName, TextWriter output, CancellationToken cancellation)
@@ -166,7 +176,7 @@ namespace VNLib.Tools.Build.Executor.Constants
         /// </summary>
         /// <param name="psi">The process to log</param>
         /// <param name="logName">The name of the formatted log output</param>
-        /// <param name="output">The detination stream to write the output to</param>
+        /// <param name="output">The destination stream to write the output to</param>
         /// <param name="cancellation">A token to cancel the read operation</param>
         /// <returns>A task that completes when all text is read and/or the process has exited</returns>
         internal static async Task ProcessStdErrAsync(Process psi, string logName, TextWriter output, CancellationToken cancellation)
