@@ -1,4 +1,4 @@
-﻿/*
+/*
 * Copyright (c) 2026 Vaughn Nugent
 * 
 * Library: VNLib
@@ -31,7 +31,7 @@ using Typin.Exceptions;
 
 namespace VNLib.Tools.Build.Executor.Dependencies.Commands
 {
-    [Command("deps", Description = "vnbuild package management")]
+    [Command("deps", Description = "vnbuild package management (Experimental)")]
     public class DepsBaseCommand : ICommand
     {
         public virtual ValueTask ExecuteAsync(IConsole console)
