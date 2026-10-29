@@ -1,4 +1,4 @@
-version: 43
+version: 56
 jobs:
 - name: Push to GitHub
   steps:
@@ -7,7 +7,7 @@ jobs:
     remoteUrl: https://github.com/VnUgE/vnbuild.git
     userName: VnUgE
     passwordSecret: git-access-token
-    force: false
+    force: true
     condition: SUCCESSFUL
     optional: false
   - type: PushRepository
@@ -23,8 +23,10 @@ jobs:
   - type: BranchUpdateTrigger
     userMatch: anyone
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 3600
 
 - name: Mock Build
@@ -34,9 +36,15 @@ jobs:
     name: Checkout Code
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
-        git clone @server_url@/@project_path@ --branch @branch@
+        git clone @server_url@/@project_path@ --branch @branch@ @project_name@
+
+        cd @project_name@
+        mise trust mise.toml
+        mise install
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -44,9 +52,12 @@ jobs:
     name: VNBuild build
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
-        vnbuild build --verbose --no-delay
+        cd @project_name@
+        mise ci-vnbuild build --verbose --no-delay
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -54,9 +65,12 @@ jobs:
     name: VNBuild publish
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
-        vnbuild publish --verbose
+        cd @project_name@
+        mise ci-vnbuild publish --verbose
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -71,8 +85,10 @@ jobs:
     branches: -master
     userMatch: anyone
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 3600
 
 - name: Build and publish
@@ -82,9 +98,15 @@ jobs:
     name: Checkout Code
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
-        git clone @server_url@/@project_path@ --branch @branch@
+        git clone @server_url@/@project_path@ --branch @branch@ @project_name@
+
+        cd @project_name@
+        mise trust mise.toml
+        mise install
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -92,9 +114,12 @@ jobs:
     name: VNBuild build
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
-        vnbuild build --no-delay
+        cd @project_name@
+        mise ci-vnbuild build --no-delay
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -102,9 +127,12 @@ jobs:
     name: VNBuild publish
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
-        vnbuild publish --ftp "@secret:ftp_server_address@" --sign
+        cd @project_name@
+        mise ci-vnbuild publish --ftp "@secret:ftp_server_address@" --sign
+    runAs: 0:0
     envVars:
     - name: FTP_USERNAME
       value: '@secret:ftp_username@'
@@ -118,6 +146,8 @@ jobs:
     branches: master
     userMatch: anyone
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 3600
